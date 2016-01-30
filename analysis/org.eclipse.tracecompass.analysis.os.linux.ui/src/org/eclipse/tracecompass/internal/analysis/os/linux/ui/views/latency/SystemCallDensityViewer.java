@@ -36,7 +36,7 @@ public class SystemCallDensityViewer extends AbstractSegmentStoreDensityViewer {
     }
 
     @Override
-    protected @Nullable AbstractSegmentStoreAnalysisModule getSegmentStoreAnalysisModule(ITmfTrace trace) {
+    protected @Nullable AbstractSegmentStoreAnalysisModule getSegmentStoreProvider(ITmfTrace trace) {
         return TmfTraceUtils.getAnalysisModuleOfClass(trace, SystemCallLatencyAnalysis.class, SystemCallLatencyAnalysis.ID);
     }
 }
