@@ -158,7 +158,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
      *            The end time of this entry
      */
     public TimeGraphEntry(String name, long startTime, long endTime) {
-        fModel = new TimeGraphEntryModel(-1, -1, name, startTime, endTime);
+        setModel(new TimeGraphEntryModel(-1, -1, name, startTime, endTime));
     }
 
     /**
@@ -169,7 +169,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
      * @since 4.0
      */
     public TimeGraphEntry(TimeGraphEntryModel model) {
-        fModel = model;
+        setModel(model);
     }
 
     // ---------------------------------------------
@@ -215,7 +215,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
 
     @Override
     public String getName() {
-        return fModel.getName();
+        return getModel().getName();
     }
 
     /**
@@ -229,17 +229,18 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
          * Model is immutable, this is the only way to do this, consider not updating
          * name in the future?
          */
-        fModel = new TimeGraphEntryModel(fModel.getId(), fModel.getParentId(), name, getStartTime(), getEndTime(), fModel.hasRowModel());
+        ITimeGraphEntryModel model = getModel();
+        setModel(new TimeGraphEntryModel(model.getId(), model.getParentId(), name, getStartTime(), getEndTime(), model.hasRowModel()));
     }
 
     @Override
     public long getStartTime() {
-        return fModel.getStartTime();
+        return getModel().getStartTime();
     }
 
     @Override
     public long getEndTime() {
-        return fModel.getEndTime();
+        return getModel().getEndTime();
     }
 
     /**
@@ -253,12 +254,13 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
          * Model is immutable, this is the only way to do this, consider not updating
          * end time in the future?
          */
-        fModel = new TimeGraphEntryModel(fModel.getId(), fModel.getParentId(), fModel.getName(), fModel.getStartTime(), Long.max(getEndTime(), endTime), fModel.hasRowModel());
+        ITimeGraphEntryModel model = getModel();
+        setModel(new TimeGraphEntryModel(model.getId(), model.getParentId(), model.getName(), model.getStartTime(), Long.max(getEndTime(), endTime), model.hasRowModel()));
     }
 
     @Override
     public boolean hasTimeEvents() {
-        return fModel.hasRowModel();
+        return getModel().hasRowModel();
     }
 
     @Override
@@ -370,8 +372,9 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
     public void updateZoomedEvent(ITimeEvent event) {
         try (TraceCompassLogUtils.ScopeLog poc = new TraceCompassLogUtils.ScopeLog(LOGGER, Level.FINE, "UpdateZoomedEvent")) { //$NON-NLS-1$
 
-            long start = fModel.getStartTime();
-            long end = fModel.getEndTime();
+            ITimeGraphEntryModel model = getModel();
+            long start = model.getStartTime();
+            long end = model.getEndTime();
 
             // If the entry has no time event, put a null time event to it
             if (fZoomedEventList.isEmpty()) {
@@ -426,16 +429,17 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
             return;
         }
         long start = event.getTime();
-        long newStart = fModel.getStartTime() == SWT.DEFAULT ? start : Long.min(start, fModel.getStartTime());
+        ITimeGraphEntryModel model = getModel();
+        long newStart = model.getStartTime() == SWT.DEFAULT ? start : Long.min(start, model.getStartTime());
 
         long end = start + event.getDuration();
-        long newEnd = fModel.getEndTime() == SWT.DEFAULT ? end : Long.max(end, fModel.getEndTime());
+        long newEnd = model.getEndTime() == SWT.DEFAULT ? end : Long.max(end, model.getEndTime());
 
         /*
          * Model is immutable, this is the only way to do this, consider not updating
          * bounds in the future?
          */
-        fModel = new TimeGraphEntryModel(fModel.getId(), fModel.getParentId(), getName(), newStart, newEnd, fModel.hasRowModel());
+        setModel(new TimeGraphEntryModel(model.getId(), model.getParentId(), getName(), newStart, newEnd, model.hasRowModel()));
     }
 
     /**
@@ -523,7 +527,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + fModel.getName() + ')';
+        return getClass().getSimpleName() + '(' + getModel().getName() + ')';
     }
 
     /**
@@ -532,7 +536,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
     @Override
     public boolean matches(@NonNull Pattern pattern) {
         // Default implementation
-        return pattern.matcher(fModel.getName()).find();
+        return pattern.matcher(getModel().getName()).find();
     }
 
     /**
@@ -577,8 +581,9 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
      */
     @Override
     public @NonNull Multimap<@NonNull String, @NonNull String> getMetadata() {
-        if (fModel instanceof IFilterableDataModel) {
-            return ((IFilterableDataModel) fModel).getMetadata();
+        ITimeGraphEntryModel model = getModel();
+        if (model instanceof IFilterableDataModel) {
+            return ((IFilterableDataModel) model).getMetadata();
         }
         return HashMultimap.create();
     }
@@ -591,10 +596,11 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
      * @since 4.0
      */
     public void updateModel(@NonNull TimeGraphEntryModel model) {
-        if (fModel.getId() != model.getId()) {
+        ITimeGraphEntryModel model2 = getModel();
+        if (model2.getId() != model.getId()) {
             throw new IllegalArgumentException("TimeGraphEntry should be updated with a TimeGraphEntryModel with the same id."); //$NON-NLS-1$
         }
-        fModel = model;
+        setModel(model);
     }
 
     /**
@@ -611,5 +617,9 @@ public class TimeGraphEntry implements ITimeGraphEntry, IFilterableDataModel {
             }
         }
         return false;
+    }
+
+    protected void setModel(TimeGraphEntryModel model) {
+        fModel = model;
     }
 }
