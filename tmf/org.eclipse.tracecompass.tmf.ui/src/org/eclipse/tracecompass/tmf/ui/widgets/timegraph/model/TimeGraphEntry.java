@@ -162,7 +162,6 @@ public class TimeGraphEntry implements ITimeGraphEntry, IElementResolver {
      */
     public TimeGraphEntry(String name, long startTime, long endTime) {
         this(new TimeGraphEntryModel(-1, -1, name, startTime, endTime));
-
     }
 
     /**
@@ -550,7 +549,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IElementResolver {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + '(' + fModel.getName() + ')';
+        return getClass().getSimpleName() + '(' + getModel().getName() + ')';
     }
 
     /**
@@ -559,7 +558,7 @@ public class TimeGraphEntry implements ITimeGraphEntry, IElementResolver {
     @Override
     public boolean matches(@NonNull Pattern pattern) {
         // Default implementation
-        return pattern.matcher(fModel.getName()).find();
+        return pattern.matcher(getModel().getName()).find();
     }
 
     /**
@@ -618,8 +617,9 @@ public class TimeGraphEntry implements ITimeGraphEntry, IElementResolver {
      */
     @Override
     public @NonNull Multimap<@NonNull String, @NonNull String> getMetadata() {
-        if (fModel instanceof IElementResolver) {
-            return ((IElementResolver) fModel).getMetadata();
+        ITimeGraphEntryModel model = getModel();
+        if (model instanceof IElementResolver) {
+            return ((IElementResolver) model).getMetadata();
         }
         return ImmutableMultimap.of();
     }
@@ -632,8 +632,9 @@ public class TimeGraphEntry implements ITimeGraphEntry, IElementResolver {
      * @since 4.0
      */
     public void updateModel(@NonNull TimeGraphEntryModel model) {
-        if (fModel.getId() != model.getId()) {
-            throw new IllegalArgumentException("TimeGraphEntry should be updated with a TimeGraphEntryModel with the same id."); //$NON-NLS-1$
+        ITmfTreeDataModel entryModel = getEntryModel();
+        if (entryModel.getId() != model.getId()) {
+            throw new IllegalArgumentException(String.format("TimeGraphEntry of type %s should be updated with a TimeGraphEntryModel with the same id. Old model: %d, new model: %d", this.getClass(), entryModel.getId(), model.getId())); //$NON-NLS-1$
         }
         fModel = model;
         fStartTime = model.getStartTime();
