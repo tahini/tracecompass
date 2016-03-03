@@ -169,6 +169,7 @@ public class TmfXmlPatternSegmentBuilder {
             case STRING:
                 builder.append(value.unboxStr());
                 break;
+            case CUSTOM:
             default:
                 throw new StateValueTypeException("Invalid type of state value"); //$NON-NLS-1$
             }

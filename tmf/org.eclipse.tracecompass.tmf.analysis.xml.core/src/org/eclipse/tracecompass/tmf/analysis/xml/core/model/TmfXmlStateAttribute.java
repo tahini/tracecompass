@@ -298,6 +298,7 @@ public abstract class TmfXmlStateAttribute implements ITmfXmlStateAttribute {
                 }
                 case DOUBLE:
                 case NULL:
+                case CUSTOM:
                 default:
                     quark = IXmlStateSystemContainer.ERROR_QUARK; // error
                     break;

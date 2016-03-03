@@ -73,6 +73,7 @@ public final class KernelThreadInformationProvider {
             case DOUBLE:
             case NULL:
             case STRING:
+            case CUSTOM:
             default:
                 break;
             }
@@ -139,6 +140,7 @@ public final class KernelThreadInformationProvider {
             case LONG:
             case NULL:
             case STRING:
+            case CUSTOM:
             default:
                 break;
             }
@@ -182,6 +184,7 @@ public final class KernelThreadInformationProvider {
                 case LONG:
                 case NULL:
                 case INTEGER:
+                case CUSTOM:
                 default:
                     break;
                 }

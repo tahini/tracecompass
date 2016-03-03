@@ -22,6 +22,8 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.tracecompass.statesystem.core.exceptions.StateValueTypeException;
 import org.eclipse.tracecompass.statesystem.core.exceptions.TimeRangeException;
 import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;
+import org.eclipse.tracecompass.statesystem.core.statevalue.CustomStateValue;
+import org.eclipse.tracecompass.statesystem.core.statevalue.CustomStateValueFactory;
 import org.eclipse.tracecompass.statesystem.core.statevalue.ITmfStateValue;
 import org.eclipse.tracecompass.statesystem.core.statevalue.TmfStateValue;
 
@@ -53,6 +55,7 @@ public final class HTInterval implements ITmfStateInterval, Comparable<HTInterva
     private static final byte TYPE_STRING = 1;
     private static final byte TYPE_LONG = 2;
     private static final byte TYPE_DOUBLE = 3;
+    private static final byte TYPE_CUSTOM = 4;
 
     /* String entry sizes of different state values */
     private static final int NO_ENTRY_SIZE = 0;
@@ -216,6 +219,44 @@ public final class HTInterval implements ITmfStateInterval, Comparable<HTInterva
             buffer.reset();
             break;
 
+        case TYPE_CUSTOM:
+            /* Go read the matching entry in the Strings section of the block */
+            buffer.mark();
+            buffer.position(valueOrOffset);
+
+            /* the first byte = the custom type id */
+            byte customType = buffer.get();
+            CustomStateValueFactory customFactory = CustomStateValue.getCustomFactory(customType);
+            if (customFactory == null) {
+                throw new IllegalStateException("No custom factory registered for type " + customType);
+            }
+
+            /* the second byte = the size to read */
+            valueSize = buffer.getInt();
+
+            /*
+             * Careful though, 'valueSize' is the total size of the entry,
+             * including the 'type' and 'size' bytes at the start and end (0'ed) byte at the
+             * end. Here we want 'array' to only contain the real payload of the
+             * value.
+             */
+            array = new byte[valueSize - 2 - Integer.BYTES];
+            buffer.get(array);
+            ByteBuffer customBuffer = ByteBuffer.allocate(valueSize - 2 - Integer.BYTES);
+            customBuffer.mark();
+            customBuffer.put(array);
+            customBuffer.reset();
+            value = customFactory.readCustomValue(customBuffer);
+
+            /* Confirm the 0'ed byte at the end */
+            res = buffer.get();
+            if (res != 0) {
+                throw new IOException(errMsg);
+            }
+
+            buffer.reset();
+            break;
+
         default:
             /* Unknown data, better to not make anything up... */
             throw new IOException(errMsg);
@@ -333,6 +374,31 @@ public final class HTInterval implements ITmfStateInterval, Comparable<HTInterva
             buffer.reset();
             break;
 
+        case TYPE_CUSTOM:
+            if (!(sv instanceof CustomStateValue)) {
+                throw new IllegalStateException();
+            }
+            CustomStateValue csv = (CustomStateValue) sv;
+            byte[] byteArray = csv.getBytes();
+
+            /* we use the valueOffset as an offset. */
+            buffer.putInt(endPosOfStringEntry - stringsEntrySize);
+            buffer.mark();
+            buffer.position(endPosOfStringEntry - stringsEntrySize);
+
+            /*
+             * write the Strings entry (1st byte = size, then the bytes, then the 0)
+             */
+            buffer.put(csv.getCustomTypeId());
+            buffer.putInt(stringsEntrySize);
+            buffer.put(byteArray);
+            buffer.put((byte) 0);
+
+            if (buffer.position() != endPosOfStringEntry) {
+                throw new IllegalStateException();
+            }
+            buffer.reset();
+            break;
         default:
             break;
         }
@@ -402,6 +468,12 @@ public final class HTInterval implements ITmfStateInterval, Comparable<HTInterva
                 /* We're inside a switch/case for the string type, can't happen */
                 throw new IllegalStateException(e);
             }
+        case CUSTOM:
+            if (!(sv instanceof CustomStateValue)) {
+                throw new IllegalStateException("Type should not be custom if he state value is not of class CustomStateValue"); //$NON-NLS-1$
+            }
+            /* Custom value's size + 2 (1 byte for custom type ID, 1 byte for \0 at the end) + size of int for the size */
+            return ((CustomStateValue) sv).getBytes().length + 2 + Integer.BYTES;
         default:
             /* It's very important that we know how to write the state value in
              * the file!! */
@@ -473,6 +545,8 @@ public final class HTInterval implements ITmfStateInterval, Comparable<HTInterva
             return TYPE_LONG;
         case DOUBLE:
             return TYPE_DOUBLE;
+        case CUSTOM:
+            return TYPE_CUSTOM;
         default:
             /* Should not happen if the switch is fully covered */
             throw new IllegalStateException();

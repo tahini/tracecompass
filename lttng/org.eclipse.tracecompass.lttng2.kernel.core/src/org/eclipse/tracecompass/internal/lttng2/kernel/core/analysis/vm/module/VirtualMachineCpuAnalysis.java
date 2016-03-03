@@ -232,6 +232,7 @@ public class VirtualMachineCpuAnalysis extends TmfStateSystemAnalysisModule {
                     case LONG:
                     case NULL:
                     case STRING:
+                    case CUSTOM:
                     default:
                         break;
                     }

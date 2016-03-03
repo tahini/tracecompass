@@ -298,6 +298,7 @@ public abstract class TmfXmlStateValue implements ITmfXmlStateValue {
                 break;
             case NULL:
             case STRING:
+            case CUSTOM:
             default:
                 value = TmfStateValue.newValueString(fieldString);
                 break;
@@ -317,6 +318,7 @@ public abstract class TmfXmlStateValue implements ITmfXmlStateValue {
                 break;
             case LONG:
             case NULL:
+            case CUSTOM:
             default:
                 value = TmfStateValue.newValueLong(fieldLong);
                 break;
@@ -336,6 +338,7 @@ public abstract class TmfXmlStateValue implements ITmfXmlStateValue {
                 break;
             case INTEGER:
             case NULL:
+            case CUSTOM:
             default:
                 value = TmfStateValue.newValueInt(fieldInteger);
                 break;
@@ -355,6 +358,7 @@ public abstract class TmfXmlStateValue implements ITmfXmlStateValue {
                 break;
             case DOUBLE:
             case NULL:
+            case CUSTOM:
             default:
                 value = TmfStateValue.newValueDouble(fieldDouble);
                 break;

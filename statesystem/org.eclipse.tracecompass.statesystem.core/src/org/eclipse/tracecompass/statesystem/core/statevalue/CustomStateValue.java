@@ -1,37 +1,54 @@
 /*******************************************************************************
- * Copyright (c) 2012, 2014 Ericsson
- * Copyright (c) 2010, 2011 École Polytechnique de Montréal
- * Copyright (c) 2010, 2011 Alexandre Montplaisir <alexandre.montplaisir@gmail.com>
+ * Copyright (c) 2016 École Polytechnique de Montréal
  *
  * All rights reserved. This program and the accompanying materials are
  * made available under the terms of the Eclipse Public License v1.0 which
  * accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *
  *******************************************************************************/
 
 package org.eclipse.tracecompass.statesystem.core.statevalue;
+
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.statesystem.core.exceptions.StateValueTypeException;
 
 /**
- * A state value containing a variable-sized string
- *
- * @version 1.0
- * @author Alexandre Montplaisir
+ * @author Geneviève Bastien
+ * @since 2.0
  */
-final class StringStateValue extends TmfStateValue {
+public abstract class CustomStateValue extends TmfStateValue {
 
-    private final String value;
+    private static final int MAX_BUFFER_LENGTH = 100000;
 
-    public StringStateValue(String valueAsString) {
-        this.value = valueAsString;
+    private static final Map<Byte, CustomStateValueFactory> CUSTOM_FACTORIES = new HashMap<>();
+
+    public static void registerCustomFactory(Byte customId, CustomStateValueFactory factory) {
+        CUSTOM_FACTORIES.put(customId, factory);
+    }
+
+    public static @Nullable CustomStateValueFactory getCustomFactory(Byte customId) {
+        return CUSTOM_FACTORIES.get(customId);
+    }
+
+    public static void insertStringBytes(ByteBuffer buf, String str) {
+        buf.putInt(str.length());
+        buf.put(str.getBytes());
+    }
+
+    public static String readString(ByteBuffer buffer) {
+        int strSize = buffer.getInt();
+        byte[] array = new byte[strSize];
+        buffer.get(array);
+        return new String(array);
     }
 
     @Override
-    public Type getType() {
-        return Type.STRING;
+    public final Type getType() {
+        return Type.CUSTOM;
     }
 
     @Override
@@ -39,33 +56,18 @@ final class StringStateValue extends TmfStateValue {
         return false;
     }
 
-    @Override
-    public boolean equals(@Nullable Object object) {
-        if (!(object instanceof StringStateValue)) {
-            return false;
-        }
-        StringStateValue other = (StringStateValue) object;
-        return value.equals(other.value);
+    public byte[] getBytes() {
+        ByteBuffer buffer = ByteBuffer.allocate(MAX_BUFFER_LENGTH);
+        getBytesToBuffer(buffer);
+        int pos = buffer.position();
+        byte[] bytes = new byte[pos];
+        System.arraycopy(buffer.array(), 0, bytes, 0, pos);
+        return bytes;
     }
 
-    @Override
-    public int hashCode() {
-        return value.hashCode();
-    }
+    protected abstract void getBytesToBuffer(ByteBuffer buffer);
 
-    @Override
-    public String toString() {
-        return value;
-    }
-
-    // ------------------------------------------------------------------------
-    // Unboxing methods
-    // ------------------------------------------------------------------------
-
-    @Override
-    public String unboxStr() {
-        return value;
-    }
+    public abstract Byte getCustomTypeId();
 
     @Override
     public int compareTo(@Nullable ITmfStateValue other) {
@@ -87,13 +89,11 @@ final class StringStateValue extends TmfStateValue {
              */
             return 1;
         case STRING:
-            StringStateValue otherStringValue = (StringStateValue) other;
-            return value.compareTo(otherStringValue.value);
+            throw new StateValueTypeException("A String state value cannot be compared to a String state value."); //$NON-NLS-1$
         case CUSTOM:
         default:
             throw new StateValueTypeException("A String state value cannot be compared to the type " + other.getType()); //$NON-NLS-1$
         }
-
     }
 
 }

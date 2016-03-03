@@ -224,6 +224,7 @@ public class TmfXmlReadWriteStateValue extends TmfXmlStateValue {
         case DOUBLE:
         case NULL:
         case STRING:
+        case CUSTOM:
         default:
         }
         return value;
