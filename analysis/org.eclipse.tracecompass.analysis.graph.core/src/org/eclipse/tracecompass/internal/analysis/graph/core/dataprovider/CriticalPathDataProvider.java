@@ -236,6 +236,7 @@ public class CriticalPathDataProvider extends AbstractTmfTraceDataProvider imple
         private final Map<String, CriticalPathEntry> fHostEntries = new HashMap<>();
         private final Map<IGraphWorker, CriticalPathEntry> fWorkers = new LinkedHashMap<>();
         private final TmfGraphStatistics fStatistics = new TmfGraphStatistics();
+        private final @Nullable TmfVertex fHead;
 
         /**
          * Store the states in a {@link TreeMultimap} so that they are grouped by entry
@@ -251,12 +252,14 @@ public class CriticalPathDataProvider extends AbstractTmfTraceDataProvider imple
          */
         private @Nullable List<ITimeGraphArrow> fGraphLinks;
 
+
         private CriticalPathVisitor(TmfGraph graph, IGraphWorker worker) {
             fGraph = graph;
             fStart = getTrace().getStartTime().toNanos();
             fEnd = getTrace().getEndTime().toNanos();
 
-            TmfVertex head = graph.getHead();
+            TmfVertex head = graph.getHead(worker);
+            fHead = head;
             if (head != null) {
                 fStart = Long.min(fStart, head.getTs());
                 for (IGraphWorker w : graph.getWorkers()) {
@@ -328,8 +331,12 @@ public class CriticalPathDataProvider extends AbstractTmfTraceDataProvider imple
             if (fCached != null) {
                 return fCached;
             }
+            TmfVertex head = fHead;
+            if (head == null) {
+                return Collections.emptyList();
+            }
 
-            fGraph.scanLineTraverse(fGraph.getHead(), this);
+            fGraph.scanLineTraverse(fGraph.getHead(head), this);
             List<@NonNull CriticalPathEntry> list = new ArrayList<>(fHostEntries.values());
             list.addAll(fWorkers.values());
             fCached = list;
@@ -338,9 +345,13 @@ public class CriticalPathDataProvider extends AbstractTmfTraceDataProvider imple
 
         public synchronized List<ITimeGraphArrow> getGraphLinks() {
             if (fGraphLinks == null) {
+                TmfVertex head = fHead;
+                if (head == null) {
+                    return Collections.emptyList();
+                }
                 // the graph has not been traversed yet
                 fGraphLinks = new ArrayList<>();
-                fGraph.scanLineTraverse(fGraph.getHead(), this);
+                fGraph.scanLineTraverse(fGraph.getHead(head), this);
             }
             return fGraphLinks;
         }

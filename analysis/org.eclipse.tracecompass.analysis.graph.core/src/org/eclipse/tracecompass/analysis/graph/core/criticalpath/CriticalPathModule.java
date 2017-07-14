@@ -19,7 +19,7 @@ import org.eclipse.tracecompass.analysis.graph.core.base.TmfVertex;
 import org.eclipse.tracecompass.analysis.graph.core.building.TmfGraphBuilderModule;
 import org.eclipse.tracecompass.common.core.NonNullUtils;
 import org.eclipse.tracecompass.internal.analysis.graph.core.Activator;
-import org.eclipse.tracecompass.internal.analysis.graph.core.criticalpath.CriticalPathAlgorithmBounded;
+import org.eclipse.tracecompass.internal.analysis.graph.core.criticalpath.GraphFromWorkerAlgorithm;
 import org.eclipse.tracecompass.internal.analysis.graph.core.criticalpath.Messages;
 import org.eclipse.tracecompass.tmf.core.analysis.TmfAbstractAnalysisModule;
 import org.eclipse.tracecompass.tmf.core.exceptions.TmfAnalysisException;
@@ -117,7 +117,7 @@ public class CriticalPathModule extends TmfAbstractAnalysisModule implements ICr
     }
 
     private static ICriticalPathAlgorithm getAlgorithm(TmfGraph graph) {
-        return new CriticalPathAlgorithmBounded(graph);
+        return new GraphFromWorkerAlgorithm(graph);
     }
 
     @Override
