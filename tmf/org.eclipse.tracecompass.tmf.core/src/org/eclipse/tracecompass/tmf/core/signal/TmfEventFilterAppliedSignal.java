@@ -12,7 +12,9 @@
 
 package org.eclipse.tracecompass.tmf.core.signal;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.tracecompass.tmf.core.filter.ITmfFilter;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 
 /**
@@ -23,7 +25,7 @@ import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 public class TmfEventFilterAppliedSignal extends TmfSignal {
 
     private final ITmfTrace fTrace;
-    private final ITmfFilter fEventFilter;
+    private final TraceCompassFilter fFilter;
 
     /**
      * Constructor for a new signal.
@@ -35,10 +37,28 @@ public class TmfEventFilterAppliedSignal extends TmfSignal {
      * @param filter
      *            The applied event filter or null
      */
-    public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, ITmfFilter filter) {
+    public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, @NonNull ITmfFilter filter) {
         super(source);
         fTrace = trace;
-        fEventFilter = filter;
+        fFilter = TraceCompassFilter.fromEventFilter(filter);
+    }
+
+    /**
+     * Constructor for a new signal.
+     *
+     * @param source
+     *            The object sending this signal
+     * @param trace
+     *            The trace to which filter is applied
+     * @param regex
+     *            The filter regex string, as per the syntax of
+     *            {@link org.eclipse.tracecompass.tmf.filter.parser}
+     * @since 4.1
+     */
+    public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, @NonNull String regex) {
+        super(source);
+        fTrace = trace;
+        fFilter = TraceCompassFilter.fromRegex(regex);
     }
 
     /**
@@ -51,16 +71,31 @@ public class TmfEventFilterAppliedSignal extends TmfSignal {
     }
 
     /**
-     * Get the event filter being applied
+     * Get the event filter being applied. This filter should be applied on data
+     * sources based on events. For other types of data sources, use the
+     * {@link #getFilter()} method to get the full filter.
      *
      * @return The filter
+     * @deprecated Use the {@link #getFilter()} method instead
      */
+    @Deprecated
     public ITmfFilter getEventFilter() {
-        return fEventFilter;
+        return fFilter.getEventFilter();
+    }
+
+    /**
+     * Get the filter that is being applied
+     *
+     * @return The filter being applied
+     *
+     * @since 4.1
+     */
+    public TraceCompassFilter getFilter() {
+        return fFilter;
     }
 
     @Override
     public String toString() {
-        return "[TmfEventFilterAppliedSignal (" + fTrace.getName() + " : " + fEventFilter + ")]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        return "[TmfEventFilterAppliedSignal (" + fTrace.getName() + " : " + fFilter + ")]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 }
