@@ -90,6 +90,15 @@
             name="%synchronization.view.name"
             restorable="true">
       </view>
+      <view
+            allowMultiple="false"
+            category="org.eclipse.linuxtools.tmf.ui.views.category"
+            class="org.eclipse.tracecompass.internal.tmf.ui.views.global.filters.GlobalFilterView"
+            icon="icons/eview16/filters_view.gif"
+            id="org.eclipse.linuxtools.tmf.ui.views.globalfilter"
+            name="%globalfilter.view.name"
+            restorable="true">
+      </view>
    </extension>
    <extension
          point="org.eclipse.ui.editors">
