@@ -37,6 +37,9 @@ public class SeriesModel implements ISeriesModel {
     @SerializedName("yValues")
     private final double[] fYValues;
 
+    @SerializedName("properties")
+    private final int[] fProperties;
+
     /**
      * Constructor
      *
@@ -50,10 +53,29 @@ public class SeriesModel implements ISeriesModel {
      *            The y values of this series
      */
     public SeriesModel(long id, String name, long[] xValues, double[] data) {
+        this(id, name, xValues, data, new int[xValues.length]);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param id
+     *            The unique ID of the associated entry
+     * @param name
+     *            The name of the series
+     * @param xValues
+     *            The x values of this series
+     * @param data
+     *            The y values of this series
+     * @param properties
+     * @since 4.1
+     */
+    public SeriesModel(long id, String name, long[] xValues, double[] data, int[] properties) {
         fId = id;
         fName = name;
         fXValues = xValues;
         fYValues = data;
+        fProperties = properties;
     }
 
     @Override
@@ -76,4 +98,8 @@ public class SeriesModel implements ISeriesModel {
         return fYValues;
     }
 
+    @Override
+    public int[] getProperties() {
+        return fProperties;
+    }
 }

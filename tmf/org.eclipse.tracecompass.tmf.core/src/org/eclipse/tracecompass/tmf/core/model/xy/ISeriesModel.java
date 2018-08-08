@@ -47,4 +47,11 @@ public interface ISeriesModel {
      * @return An array of y values
      */
     double[] getData();
+
+    /**
+     * @since 4.1
+     */
+    default int[] getProperties() {
+        return new int[getXAxis().length];
+    }
 }

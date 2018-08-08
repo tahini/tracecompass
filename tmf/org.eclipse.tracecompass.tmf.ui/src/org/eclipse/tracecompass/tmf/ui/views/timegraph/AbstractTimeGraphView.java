@@ -369,7 +369,7 @@ public abstract class AbstractTimeGraphView extends TmfView implements ITmfTimeA
 
     private List<IContextActivation> fActiveContexts = new ArrayList<>();
 
-    private String fGlobalFilter = null;
+    private String fGlobalFilter = ""; //$NON-NLS-1$
 
     // ------------------------------------------------------------------------
     // ------------------------------------------------------------------------
