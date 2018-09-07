@@ -40,7 +40,7 @@ public class TmfEventFilterAppliedSignal extends TmfSignal {
     public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, @NonNull ITmfFilter filter) {
         super(source);
         fTrace = trace;
-        fFilter = TraceCompassFilter.fromEventFilter(filter);
+        fFilter = TraceCompassFilter.fromEventFilter(filter, trace);
     }
 
     /**
@@ -58,7 +58,7 @@ public class TmfEventFilterAppliedSignal extends TmfSignal {
     public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, @NonNull String regex) {
         super(source);
         fTrace = trace;
-        fFilter = TraceCompassFilter.fromRegex(regex);
+        fFilter = TraceCompassFilter.fromRegex(regex, trace);
     }
 
     /**

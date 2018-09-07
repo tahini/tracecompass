@@ -62,7 +62,7 @@ public class TraceCompassFilter {
      * @return A new filter
      */
     public static TraceCompassFilter fromRegex(String regex, ITmfTrace trace) {
-        ITmfFilter filter = TmfFilterHelper.buildFilterFromRegex(regex);
+        ITmfFilter filter = TmfFilterHelper.buildFilterFromRegex(regex, trace);
         TraceCompassFilter traceCompassFilter = new TraceCompassFilter(filter, regex);
         FILTER_MAP.put(trace, traceCompassFilter);
         return traceCompassFilter;

@@ -10,9 +10,9 @@
 package org.eclipse.tracecompass.internal.tmf.core.filter;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.tracecompass.tmf.core.event.ITmfEvent;
+import org.eclipse.tracecompass.internal.provisional.tmf.core.model.filter.parser.FilterCu;
 import org.eclipse.tracecompass.tmf.core.filter.ITmfFilter;
+import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 
 /**
  * Helper class to convert to/from {@link ITmfFilter} and filter regexes
@@ -21,15 +21,6 @@ import org.eclipse.tracecompass.tmf.core.filter.ITmfFilter;
  */
 @NonNullByDefault
 public final class TmfFilterHelper {
-
-    private static final ITmfFilter PASS_ALL = new ITmfFilter() {
-
-        @Override
-        public boolean matches(@Nullable ITmfEvent event) {
-            return true;
-        }
-
-    };
 
     private TmfFilterHelper() {
         // nothing to do
@@ -40,11 +31,16 @@ public final class TmfFilterHelper {
      *
      * @param regex
      *            The filter regex
+     * @param trace
+     *            The trace this filter applies to
      * @return An event filter
      */
-    public static ITmfFilter buildFilterFromRegex(String regex) {
-        // TODO: implement this
-        return PASS_ALL;
+    public static ITmfFilter buildFilterFromRegex(String regex, ITmfTrace trace) {
+        FilterCu compile = FilterCu.compile(regex);
+        if (compile == null) {
+            throw new NullPointerException("Invalid regex"); //$NON-NLS-1$
+        }
+        return compile.getEventFilter(trace);
     }
 
     /**
