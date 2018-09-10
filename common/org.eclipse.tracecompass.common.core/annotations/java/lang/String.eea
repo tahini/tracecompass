@@ -59,3 +59,6 @@ valueOf
 valueOf
  ([CII)Ljava/lang/String;
  ([CII)L1java/lang/String;
+trim
+ ()Ljava/lang/String;
+ ()L1java/lang/String;
