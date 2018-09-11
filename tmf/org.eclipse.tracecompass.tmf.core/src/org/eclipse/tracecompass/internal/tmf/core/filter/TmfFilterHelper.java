@@ -10,6 +10,7 @@
 package org.eclipse.tracecompass.internal.tmf.core.filter;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.internal.provisional.tmf.core.model.filter.parser.FilterCu;
 import org.eclipse.tracecompass.tmf.core.filter.ITmfFilter;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
@@ -35,10 +36,10 @@ public final class TmfFilterHelper {
      *            The trace this filter applies to
      * @return An event filter
      */
-    public static ITmfFilter buildFilterFromRegex(String regex, ITmfTrace trace) {
+    public static @Nullable ITmfFilter buildFilterFromRegex(String regex, ITmfTrace trace) {
         FilterCu compile = FilterCu.compile(regex);
         if (compile == null) {
-            throw new NullPointerException("Invalid regex"); //$NON-NLS-1$
+            return null;
         }
         return compile.getEventFilter(trace);
     }

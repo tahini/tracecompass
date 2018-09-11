@@ -2083,6 +2083,34 @@ public class TmfEventsTable extends TmfComponent implements IGotoMarker, IColorS
     }
 
     /**
+     * Receive a signal to apply a filter. This will apply the filter if the
+     * source is not this viewer already
+     *
+     * @param signal
+     *            The signal
+     * @since 4.1
+     */
+    @TmfSignalHandler
+    public void eventFilterApplied(TmfEventFilterAppliedSignal signal) {
+        if (signal.getSource() == this) {
+            // This view is the source of the signal, ignore
+            return;
+        }
+        ITmfFilter eventFilter = signal.getFilter().getEventFilter();
+        if (eventFilter == null) {
+            fTable.setData(Key.SEARCH_OBJ, null);
+            fTable.refresh();
+            // clearFilters();
+        } else {
+            fTable.setData(Key.SEARCH_OBJ, eventFilter);
+            fTable.refresh();
+            searchNext();
+            // applyEventFilter(eventFilter);
+        }
+
+    }
+
+    /**
      * Stop the filtering thread.
      */
     protected void stopFilterThread() {
@@ -2102,6 +2130,11 @@ public class TmfEventsTable extends TmfComponent implements IGotoMarker, IColorS
      *            The filter to apply
      */
     protected void applyFilter(ITmfFilter filter) {
+        ITmfFilterTreeNode rootFilter = applyEventFilter(filter);
+        fireFilterApplied(rootFilter);
+    }
+
+    private ITmfFilterTreeNode applyEventFilter(ITmfFilter filter) {
         stopFilterThread();
         stopSearchThread();
         fFilterMatchCount = 0;
@@ -2129,7 +2162,7 @@ public class TmfEventsTable extends TmfComponent implements IGotoMarker, IColorS
         /* +1 for header row, +2 for top and bottom filter status rows */
         fTable.setItemCount(3);
         startFilterThread();
-        fireFilterApplied(rootFilter);
+        return rootFilter;
     }
 
     /**

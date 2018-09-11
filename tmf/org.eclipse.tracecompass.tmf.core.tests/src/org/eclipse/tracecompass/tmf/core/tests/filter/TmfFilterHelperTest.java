@@ -99,7 +99,9 @@ public class TmfFilterHelperTest {
     private static ITmfFilter getFilter(String regex) {
         ITmfTrace trace = STUB_TRACE;
         assertNotNull(trace);
-        return TmfFilterHelper.buildFilterFromRegex(regex, trace);
+        ITmfFilter filter = TmfFilterHelper.buildFilterFromRegex(regex, trace);
+        assertNotNull(filter);
+        return filter;
     }
 
     /**

@@ -37,7 +37,7 @@ public class TmfEventFilterAppliedSignal extends TmfSignal {
      * @param filter
      *            The applied event filter or null
      */
-    public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, @NonNull ITmfFilter filter) {
+    public TmfEventFilterAppliedSignal(Object source, @NonNull ITmfTrace trace, @NonNull ITmfFilter filter) {
         super(source);
         fTrace = trace;
         fFilter = TraceCompassFilter.fromEventFilter(filter, trace);
@@ -55,7 +55,7 @@ public class TmfEventFilterAppliedSignal extends TmfSignal {
      *            {@link org.eclipse.tracecompass.tmf.filter.parser}
      * @since 4.1
      */
-    public TmfEventFilterAppliedSignal(Object source, ITmfTrace trace, @NonNull String regex) {
+    public TmfEventFilterAppliedSignal(Object source, @NonNull ITmfTrace trace, @NonNull String regex) {
         super(source);
         fTrace = trace;
         fFilter = TraceCompassFilter.fromRegex(regex, trace);

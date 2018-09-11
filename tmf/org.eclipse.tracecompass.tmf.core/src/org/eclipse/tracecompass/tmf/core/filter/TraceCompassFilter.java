@@ -27,12 +27,12 @@ import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 @NonNullByDefault
 public class TraceCompassFilter {
 
-    private final ITmfFilter fEventFilter;
+    private final @Nullable ITmfFilter fEventFilter;
     private final String fRegex;
 
     private static final Map<ITmfTrace, TraceCompassFilter> FILTER_MAP = new HashMap<>();
 
-    private TraceCompassFilter(ITmfFilter filter, String regex) {
+    private TraceCompassFilter(@Nullable ITmfFilter filter, String regex) {
         fEventFilter = filter;
         fRegex = regex;
     }
@@ -73,9 +73,9 @@ public class TraceCompassFilter {
      * sources based on events. For other types of data sources, use the
      * {@link #getRegex()} method to get the filter string.
      *
-     * @return The filter
+     * @return The filter, or <code>null</code> if filters should be removed
      */
-    public ITmfFilter getEventFilter() {
+    public @Nullable ITmfFilter getEventFilter() {
         return fEventFilter;
     }
 
