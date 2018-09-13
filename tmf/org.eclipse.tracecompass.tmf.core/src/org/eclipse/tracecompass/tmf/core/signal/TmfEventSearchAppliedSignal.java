@@ -12,7 +12,10 @@
 
 package org.eclipse.tracecompass.tmf.core.signal;
 
+import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.tmf.core.filter.ITmfFilter;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 
 /**
@@ -23,7 +26,7 @@ import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 public class TmfEventSearchAppliedSignal extends TmfSignal {
 
     private final ITmfTrace fTrace;
-    private final ITmfFilter fSearchFilter;
+    private final TraceCompassFilter fSearchFilter;
 
     /**
      * Constructor for a new signal.
@@ -35,10 +38,28 @@ public class TmfEventSearchAppliedSignal extends TmfSignal {
      * @param filter
      *            The applied search filter or null
      */
-    public TmfEventSearchAppliedSignal(Object source, ITmfTrace trace, ITmfFilter filter) {
+    public TmfEventSearchAppliedSignal(Object source, @NonNull ITmfTrace trace, @Nullable ITmfFilter filter) {
         super(source);
         fTrace = trace;
-        fSearchFilter = filter;
+        fSearchFilter = TraceCompassFilter.fromEventFilter(filter, trace);
+    }
+
+    /**
+     * Constructor for a new signal.
+     *
+     * @param source
+     *            The object sending this signal
+     * @param trace
+     *            The trace to which filter is applied
+     * @param regex
+     *            The filter regex string, as per the syntax of
+     *            {@link org.eclipse.tracecompass.tmf.filter.parser}
+     * @since 4.1
+     */
+    public TmfEventSearchAppliedSignal(Object source, @NonNull ITmfTrace trace, @NonNull String regex) {
+        super(source);
+        fTrace = trace;
+        fSearchFilter = TraceCompassFilter.fromRegex(regex, trace);
     }
 
     /**
@@ -54,8 +75,21 @@ public class TmfEventSearchAppliedSignal extends TmfSignal {
      * Get the search filter being applied
      *
      * @return The search filter
+     * @deprecated Use the {@link #getFilter()} method instead
      */
-    public ITmfFilter getSearchFilter() {
+    @Deprecated
+    public @Nullable ITmfFilter getSearchFilter() {
+        return fSearchFilter.getEventFilter();
+    }
+
+    /**
+     * Get the filter that is being applied
+     *
+     * @return The filter being applied
+     *
+     * @since 4.1
+     */
+    public TraceCompassFilter getFilter() {
         return fSearchFilter;
     }
 

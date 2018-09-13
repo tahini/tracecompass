@@ -27,6 +27,7 @@ import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 @NonNullByDefault
 public class TraceCompassFilter {
 
+    private static final String NO_REGEX = "";
     private final @Nullable ITmfFilter fEventFilter;
     private final String fRegex;
 
@@ -46,8 +47,9 @@ public class TraceCompassFilter {
      *            The trace this filter applies to
      * @return A new filter
      */
-    public static TraceCompassFilter fromEventFilter(ITmfFilter filter, ITmfTrace trace) {
-        TraceCompassFilter traceCompassFilter = new TraceCompassFilter(filter, TmfFilterHelper.getRegexFromFilter(filter));
+    public static TraceCompassFilter fromEventFilter(@Nullable ITmfFilter filter, ITmfTrace trace) {
+        String regex = filter == null ? NO_REGEX : TmfFilterHelper.getRegexFromFilter(filter);
+        TraceCompassFilter traceCompassFilter = new TraceCompassFilter(filter, regex);
         FILTER_MAP.put(trace, traceCompassFilter);
         return traceCompassFilter;
     }

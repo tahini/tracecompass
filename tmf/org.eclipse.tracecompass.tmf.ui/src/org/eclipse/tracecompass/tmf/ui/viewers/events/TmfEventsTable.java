@@ -2098,14 +2098,35 @@ public class TmfEventsTable extends TmfComponent implements IGotoMarker, IColorS
         }
         ITmfFilter eventFilter = signal.getFilter().getEventFilter();
         if (eventFilter == null) {
+            clearFilters();
+        } else {
+            applyEventFilter(eventFilter);
+        }
+
+    }
+
+    /**
+     * Receive a signal to apply a filter. This will apply the filter if the
+     * source is not this viewer already
+     *
+     * @param signal
+     *            The signal
+     * @since 4.1
+     */
+    @TmfSignalHandler
+    public void eventSearchApplied(TmfEventSearchAppliedSignal signal) {
+        if (signal.getSource() == this) {
+            // This view is the source of the signal, ignore
+            return;
+        }
+        ITmfFilter eventFilter = signal.getFilter().getEventFilter();
+        if (eventFilter == null) {
             fTable.setData(Key.SEARCH_OBJ, null);
             fTable.refresh();
-            // clearFilters();
         } else {
             fTable.setData(Key.SEARCH_OBJ, eventFilter);
             fTable.refresh();
             searchNext();
-            // applyEventFilter(eventFilter);
         }
 
     }
