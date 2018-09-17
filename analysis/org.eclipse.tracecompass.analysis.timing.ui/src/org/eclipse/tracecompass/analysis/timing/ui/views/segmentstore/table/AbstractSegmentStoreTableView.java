@@ -29,6 +29,7 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.tracecompass.internal.analysis.timing.ui.views.segmentstore.ExportToTsvAction;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.signal.TmfTraceSelectedSignal;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceManager;
@@ -83,6 +84,7 @@ public abstract class AbstractSegmentStoreTableView extends TmfView {
     public void createPartControl(@Nullable Composite parent) {
         super.createPartControl(parent);
         SashForm sf = new SashForm(parent, SWT.NONE);
+        sf.setLayoutData(getFillGridData());
         TableViewer tableViewer = new TableViewer(sf, SWT.FULL_SELECTION | SWT.VIRTUAL);
         fSegmentStoreViewer = createSegmentStoreViewer(tableViewer);
         getViewSite().getActionBars().getMenuManager().add(fExportAction);
@@ -186,4 +188,28 @@ public abstract class AbstractSegmentStoreTableView extends TmfView {
             }
         }
     }
+
+    @Override
+    protected boolean respondToFilter() {
+        return true;
+    }
+
+    @Override
+    protected void globalFilterApplied(TraceCompassFilter filter, boolean isSearch, boolean remove) {
+        if (fSegmentStoreViewer != null) {
+            fSegmentStoreViewer.filterApplied(filter, remove);
+        }
+    }
+
+    @Override
+    protected boolean defaultResponseToFilter() {
+        return true;
+    }
+
+    @Override
+    protected boolean defaultResponseToSearch() {
+        return true;
+    }
+
+
 }

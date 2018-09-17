@@ -37,6 +37,7 @@ import org.eclipse.tracecompass.common.core.log.TraceCompassLogUtils.FlowScopeLo
 import org.eclipse.tracecompass.common.core.log.TraceCompassLogUtils.FlowScopeLogBuilder;
 import org.eclipse.tracecompass.internal.tmf.core.model.filters.TimeQueryRegexFilter;
 import org.eclipse.tracecompass.internal.tmf.ui.Activator;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.model.filters.TimeQueryFilter;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.IFilterProperty;
 import org.eclipse.tracecompass.tmf.core.model.xy.ISeriesModel;
@@ -49,7 +50,6 @@ import org.eclipse.tracecompass.tmf.core.presentation.RGBAColor;
 import org.eclipse.tracecompass.tmf.core.presentation.XYPresentationProvider;
 import org.eclipse.tracecompass.tmf.core.response.ITmfResponse;
 import org.eclipse.tracecompass.tmf.core.response.TmfModelResponse;
-import org.eclipse.tracecompass.tmf.core.signal.TmfEventFilterAppliedSignal;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalHandler;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalManager;
 import org.eclipse.tracecompass.tmf.core.signal.TmfTraceClosedSignal;
@@ -591,21 +591,22 @@ public abstract class TmfCommonXAxisChartViewer extends TmfXYChartViewer {
     }
 
     /**
-     * Set or remove the global regex filter value
-     *
-     * @param signal
-     *                   the signal carrying the regex value
      * @since 4.1
      */
-    @TmfSignalHandler
-    public void regexFilterApplied(TmfEventFilterAppliedSignal signal) {
-        String regex = signal.getFilter().getRegex();
-        setGlobalRegexFilter(regex);
-        updateContent();
+    @Override
+    public void globalFilterApplied(TraceCompassFilter filter, boolean isSearch, boolean remove) {
+        String regex = filter.getRegex();
+        if (setGlobalRegexFilter(remove ? "" : regex)) { //$NON-NLS-1$
+            updateContent();
+        }
     }
 
-    private void setGlobalRegexFilter(String regex) {
+    private boolean setGlobalRegexFilter(String regex) {
+        if (fGlobalFilter.equals(regex)) {
+            return false;
+        }
         fGlobalFilter = regex;
+        return true;
     }
 
     /**

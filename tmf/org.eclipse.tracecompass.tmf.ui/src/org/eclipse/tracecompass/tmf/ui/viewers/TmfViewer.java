@@ -14,6 +14,7 @@ package org.eclipse.tracecompass.tmf.ui.viewers;
 
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.tracecompass.tmf.core.component.TmfComponent;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 
 /**
  * Abstract class that extends {@link TmfComponent} to be specific to viewers.
@@ -82,5 +83,22 @@ public abstract class TmfViewer extends TmfComponent implements ITmfViewer {
      */
     public Composite getParent() {
         return fParent;
+    }
+
+    /**
+     * A filter is being applied on this viewer. The default implementation for
+     * this viewer is to do nothing. Child implementations can override this
+     * method to act on searches or filters
+     *
+     * @param filter
+     *            The filter to apply
+     * @param isSearch
+     *            Whether this filter is a the result of a search or a filter
+     * @param remove
+     *            Whether this filter is to be removed to added
+     * @since 4.1
+     */
+    public void globalFilterApplied(TraceCompassFilter filter, boolean isSearch, boolean remove) {
+        // Nothing by default, let children implementation implement this
     }
 }

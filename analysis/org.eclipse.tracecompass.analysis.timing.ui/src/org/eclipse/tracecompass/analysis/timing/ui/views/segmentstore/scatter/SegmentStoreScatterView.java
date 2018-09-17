@@ -67,4 +67,9 @@ public class SegmentStoreScatterView extends TmfChartView {
         return new AbstractSegmentStoreScatterChartTreeViewer(Objects.requireNonNull(parent), analysisId);
     }
 
+    @Override
+    protected boolean respondToFilter() {
+        return true;
+    }
+
 }

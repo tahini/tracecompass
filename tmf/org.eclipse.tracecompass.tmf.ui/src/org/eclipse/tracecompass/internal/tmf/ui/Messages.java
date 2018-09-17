@@ -382,6 +382,10 @@ public class Messages extends NLS {
     public static String TmfTracingPreferencePage_AlwaysCloseOnResourceChange;
     public static String TmfTracingPreferencePage_HideManyEntriesSelectedWarning;
 
+    public static String TmfView_MenuFilters;
+    public static String TmfView_MenuFiltersActOnSearch;
+    public static String TmfView_MenuFiltersActOnFilter;
+
     static {
         // initialize resource bundle
         NLS.initializeMessages(BUNDLE_NAME, Messages.class);

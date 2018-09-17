@@ -28,6 +28,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Sash;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalHandler;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalManager;
 import org.eclipse.tracecompass.tmf.core.signal.TmfTraceClosedSignal;
@@ -159,6 +160,7 @@ public abstract class TmfChartView extends TmfView implements ITmfTimeAligned, I
     public void createPartControl(Composite parent) {
         super.createPartControl(parent);
         fSashForm = new SashForm(parent, SWT.NONE);
+        fSashForm.setLayoutData(TmfView.getFillGridData());
         fTmfViewer = createLeftChildViewer(fSashForm);
         fXYViewerContainer = new Composite(fSashForm, SWT.NONE);
         GridLayout layout = new GridLayout();
@@ -417,4 +419,33 @@ public abstract class TmfChartView extends TmfView implements ITmfTimeAligned, I
             checkboxTree.addPreCheckStateListener(new ManyEntriesSelectedDialogPreCheckedListener(checkboxTree));
         }
     }
+
+    @Override
+    protected boolean respondToFilter() {
+        return false;
+    }
+
+    @Override
+    protected boolean defaultResponseToFilter() {
+        return true;
+    }
+
+    @Override
+    protected boolean defaultResponseToSearch() {
+        return true;
+    }
+
+    @Override
+    protected final void globalFilterApplied(@NonNull TraceCompassFilter filter, boolean isSearch, boolean remove) {
+        TmfXYChartViewer chartViewer = getChartViewer();
+        if (chartViewer != null) {
+            chartViewer.globalFilterApplied(filter, isSearch, remove);
+        }
+        TmfViewer leftChildViewer = getLeftChildViewer();
+        if (leftChildViewer != null) {
+            leftChildViewer.globalFilterApplied(filter, isSearch, remove);
+        }
+    }
+
+
 }

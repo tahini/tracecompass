@@ -52,6 +52,7 @@ import org.eclipse.tracecompass.segmentstore.core.ISegment;
 import org.eclipse.tracecompass.segmentstore.core.ISegmentStore;
 import org.eclipse.tracecompass.segmentstore.core.SegmentComparators;
 import org.eclipse.tracecompass.tmf.core.analysis.IAnalysisModule;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.IFilterProperty;
 import org.eclipse.tracecompass.tmf.core.segment.ISegmentAspect;
 import org.eclipse.tracecompass.tmf.core.signal.TmfEventFilterAppliedSignal;
@@ -518,8 +519,20 @@ public abstract class AbstractSegmentStoreTableViewer extends TmfSimpleTableView
         setData(getSegmentProvider());
     }
 
-    private void setGlobalRegexFilter(String regex) {
+    void filterApplied(TraceCompassFilter filter, boolean remove) {
+        String regex = filter.getRegex();
+        if (setGlobalRegexFilter(remove ? "" : regex)) { //$NON-NLS-1$
+            setData(getSegmentProvider());
+        }
+    }
+
+    private boolean setGlobalRegexFilter(String regex) {
+        // Return whether the filter was changed
+        if (fGlobalFilter.equals(regex)) {
+            return false;
+        }
         fGlobalFilter = regex;
+        return true;
     }
 
     /**
@@ -566,4 +579,5 @@ public abstract class AbstractSegmentStoreTableViewer extends TmfSimpleTableView
             }
         });
     }
+
 }

@@ -61,4 +61,9 @@ public class SystemCallLatencyScatterView extends TmfChartView {
         return new AbstractSegmentStoreScatterChartTreeViewer(Objects.requireNonNull(parent), SystemCallLatencyAnalysis.ID);
     }
 
+    @Override
+    protected boolean respondToFilter() {
+        return true;
+    }
+
 }

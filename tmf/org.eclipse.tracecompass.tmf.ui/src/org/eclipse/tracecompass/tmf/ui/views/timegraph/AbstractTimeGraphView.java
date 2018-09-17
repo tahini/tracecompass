@@ -109,9 +109,9 @@ import org.eclipse.tracecompass.internal.tmf.ui.Activator;
 import org.eclipse.tracecompass.internal.tmf.ui.markers.MarkerUtils;
 import org.eclipse.tracecompass.internal.tmf.ui.util.TimeGraphStyleUtil;
 import org.eclipse.tracecompass.internal.tmf.ui.views.timegraph.TimeEventFilterDialog;
+import org.eclipse.tracecompass.tmf.core.filter.TraceCompassFilter;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.IFilterProperty;
 import org.eclipse.tracecompass.tmf.core.resources.ITmfMarker;
-import org.eclipse.tracecompass.tmf.core.signal.TmfEventFilterAppliedSignal;
 import org.eclipse.tracecompass.tmf.core.signal.TmfMarkerEventSourceUpdatedSignal;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSelectionRangeUpdatedSignal;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalHandler;
@@ -1165,6 +1165,7 @@ public abstract class AbstractTimeGraphView extends TmfView implements ITmfTimeA
     public void createPartControl(Composite parent) {
         super.createPartControl(parent);
         fTimeGraphViewer = new TimeGraphViewer(parent, SWT.NONE);
+        fTimeGraphViewer.getTimeAlignedComposite().setLayoutData(getFillGridData());
         if (fLabelProvider != null) {
             fTimeGraphViewer.setTimeGraphLabelProvider(fLabelProvider);
         }
@@ -2758,18 +2759,28 @@ public abstract class AbstractTimeGraphView extends TmfView implements ITmfTimeA
         }
     }
 
-    /**
-     * Set or remove the global regex filter value
-     *
-     * @param signal
-     *                   the signal carrying the regex value
-     * @since 4.1
-     */
-    @TmfSignalHandler
-    public void regexFilterApplied(TmfEventFilterAppliedSignal signal) {
-        String regex = signal.getFilter().getRegex();
-        if (!regex.isEmpty()) {
+    @Override
+    protected boolean respondToFilter() {
+        return true;
+    }
+
+    @Override
+    protected boolean defaultResponseToFilter() {
+        return true;
+    }
+
+    @Override
+    protected boolean defaultResponseToSearch() {
+        return true;
+    }
+
+    @Override
+    protected void globalFilterApplied(TraceCompassFilter filter, boolean isSearch, boolean remove) {
+        String regex = filter.getRegex();
+        // Time graphs do not differenciate search or filter
+        if (!regex.isEmpty() && !remove) {
             setGlobalRegexFilter(regex);
+//            addActiveFilter(filter);
         } else {
             setGlobalRegexFilter(null);
         }
