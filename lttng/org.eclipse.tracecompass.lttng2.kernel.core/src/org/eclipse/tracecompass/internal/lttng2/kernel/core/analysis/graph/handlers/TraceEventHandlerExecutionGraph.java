@@ -386,13 +386,19 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
 
         OsInterruptContext intCtx = system.peekContextStack(host, cpu);
         Context context = intCtx.getContext();
+        OsWorker receiver = null;
         if (context == Context.SOFTIRQ) {
-            OsWorker k = getOrCreateKernelWorker(event, cpu);
-            TmfVertex endpoint = stateExtend(k, event.getTimestamp().getValue());
-            fTcpNodes.put(new DependencyEvent(event), endpoint);
-            // TODO add actual progress monitor
-            fTcpMatching.matchEvent(event, event.getTrace(), DEFAULT_PROGRESS_MONITOR);
+            receiver = getOrCreateKernelWorker(event, cpu);
+        } else if (context == Context.NONE) {
+            receiver = system.getWorkerOnCpu(event.getTrace().getHostId(), cpu);
         }
+        if (receiver == null) {
+            return;
+        }
+        TmfVertex endpoint = stateExtend(receiver, event.getTimestamp().getValue());
+        fTcpNodes.put(new DependencyEvent(event), endpoint);
+        // TODO add actual progress monitor
+        fTcpMatching.matchEvent(event, event.getTrace(), DEFAULT_PROGRESS_MONITOR);
     }
 
     private void handleInetSockLocalOut(ITmfEvent event) {
