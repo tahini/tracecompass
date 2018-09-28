@@ -291,7 +291,18 @@ public class TmfEventMatching implements ITmfEventMatching {
                     dep = new TmfEventDependency(companionEvent, depEvent);
                     break;
                 case CAUSE:
-                    dep = new TmfEventDependency(depEvent, companionEvent);
+                    /*
+                     * If the companionEvent is from the same host, ignore the
+                     * event to respect causality. That removes the effect event
+                     * from unmatched, as the new cause is the reference for
+                     * this key now. The cause will be added to unmatched events
+                     * later if it is not matched now.
+                     */
+                    if (!companionEvent.getTrace().getHostId().equals(depEvent.getTrace().getHostId())) {
+                        dep = new TmfEventDependency(depEvent, companionEvent);
+                    } else {
+                        companionTbl.put(mTrace,  eventKey, companionEvent);
+                    }
                     break;
                 default:
                     break;
