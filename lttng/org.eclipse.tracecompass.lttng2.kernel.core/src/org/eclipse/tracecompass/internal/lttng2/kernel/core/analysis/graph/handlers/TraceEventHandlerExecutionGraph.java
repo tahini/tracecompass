@@ -318,7 +318,8 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
     }
 
     private static void irq(TmfGraph graph, IKernelAnalysisEventLayout eventLayout, long ts, OsWorker target, OsInterruptContext context) {
-        TmfEdge link = graph.append(target, new TmfVertex(ts));
+        TmfVertex wup = new TmfVertex(ts);
+        TmfEdge link = graph.append(target, wup);
         if (link != null) {
             Integer vec = context.getEvent().getContent().getFieldValue(Integer.class, eventLayout.fieldIrq());
             link.setType(resolveIRQ(vec));
@@ -387,7 +388,7 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         OsInterruptContext intCtx = system.peekContextStack(host, cpu);
         Context context = intCtx.getContext();
         OsWorker receiver = null;
-        if (context == Context.SOFTIRQ) {
+        if (context == Context.SOFTIRQ || context == Context.IRQ) {
             receiver = getOrCreateKernelWorker(event, cpu);
         } else if (context == Context.NONE) {
             receiver = system.getWorkerOnCpu(event.getTrace().getHostId(), cpu);

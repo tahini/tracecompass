@@ -9,20 +9,26 @@
 
 package org.eclipse.tracecompass.internal.lttng2.kernel.core.analysis.graph.handlers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsInterruptContext;
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsExecutionGraphProvider;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsSystemModel;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsExecutionGraphProvider.Context;
 import org.eclipse.tracecompass.analysis.os.linux.core.trace.IKernelAnalysisEventLayout;
 import org.eclipse.tracecompass.common.core.NonNullUtils;
 import org.eclipse.tracecompass.tmf.core.event.ITmfEvent;
+import org.eclipse.tracecompass.tmf.core.event.ITmfEventField;
 import org.eclipse.tracecompass.tmf.core.event.aspect.TmfCpuAspect;
+import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceUtils;
 
 /**
@@ -36,17 +42,50 @@ public class EventContextHandler extends BaseHandler {
     private final Map<String, Consumer<ITmfEvent>> fHandlers = new HashMap<>();
     private final Set<IKernelAnalysisEventLayout> fLayouts = new HashSet<>();
 
-    private final Consumer<ITmfEvent> fDefault = event -> {
-        // Do nothing
-    };
+    private final Consumer<ITmfEvent> fDefault = event -> wakingInContext(event);
     private final Consumer<ITmfEvent> fSoftIrqEntryHandler = event -> pushInterruptContext(event, Context.SOFTIRQ);
     private final Consumer<ITmfEvent> fSoftIrqExitHandler = event -> popInterruptContext(event, Context.SOFTIRQ);
     private final Consumer<ITmfEvent> fHRTimerExpireEntry = event -> pushInterruptContext(event, Context.HRTIMER);
     private final Consumer<ITmfEvent> fHRTimerExpireExit = event -> popInterruptContext(event, Context.HRTIMER);
     private final Consumer<ITmfEvent> fIrqHandlerEntry = event -> pushInterruptContext(event, Context.IRQ);
-    private final Consumer<ITmfEvent> fIrqHandlerExit = event -> popInterruptContext(event, Context.IRQ);
+    private final Consumer<ITmfEvent> fIrqHandlerExit = event -> handleIrqExit(event);
     private final Consumer<ITmfEvent> fIpiEntry = event -> pushInterruptContext(event, Context.IPI);
     private final Consumer<ITmfEvent> fIpiExit = event -> popInterruptContext(event, Context.IPI);
+
+    private static class TraceCpu {
+
+        private final ITmfTrace fTrace;
+        private final Integer fCpu;
+
+        public TraceCpu(ITmfTrace trace, Integer cpu) {
+            fTrace = trace;
+            fCpu = cpu;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(fTrace, fCpu);
+        }
+
+        @Override
+        public boolean equals(@Nullable Object obj) {
+            if (!(obj instanceof TraceCpu)) {
+                return false;
+            }
+            TraceCpu other = (TraceCpu) obj;
+            return Objects.equals(this.fTrace, other.fTrace) && fCpu == other.fCpu;
+        }
+
+        public static @Nullable TraceCpu create(ITmfEvent event) {
+            Integer cpu = TmfTraceUtils.resolveIntEventAspectOfClassForEvent(event.getTrace(), TmfCpuAspect.class, event);
+            if (cpu == null) {
+                return null;
+            }
+            return new TraceCpu(event.getTrace(), cpu);
+        }
+    }
+
+    private final List<TraceCpu> fPendingContexts = new ArrayList<>();
 
     /**
      * Constructor
@@ -103,6 +142,41 @@ public class EventContextHandler extends BaseHandler {
         OsInterruptContext interruptCtx = system.peekContextStack(event.getTrace().getHostId(), cpu);
         if (interruptCtx.getContext() == ctx) {
             system.popContextStack(event.getTrace().getHostId(), cpu);
+        }
+    }
+
+    private void handleIrqExit(ITmfEvent event) {
+        // This is an irq exit, check the return value to see if there is a pending waking
+        ITmfEventField content = event.getContent();
+        if (content != null) {
+            Integer fieldValue = content.getFieldValue(Integer.class, "ret"); //$NON-NLS-1$
+            if (fieldValue != null && fieldValue == 2) {
+                // Stay in context and note a pending waking on that CPU
+                TraceCpu hostCpu = TraceCpu.create(event);
+                if (hostCpu != null) {
+                    fPendingContexts.add(hostCpu);
+                    return;
+                }
+            }
+        }
+        // No pending waking expected, just exit the context
+        popInterruptContext(event, Context.IRQ);
+    }
+
+    private void wakingInContext(ITmfEvent event) {
+        if (fPendingContexts.isEmpty()) {
+            // No pending contexts, do nothing
+            return;
+        }
+        TraceCpu hostCpu = TraceCpu.create(event);
+        if (hostCpu == null || !fPendingContexts.contains(hostCpu)) {
+            // There is no trace CPU, or this CPU is not waiting for action
+            return;
+        }
+        // If this event is a waking event, stay in context for this event, otherwise, pop the context
+        IKernelAnalysisEventLayout eventLayout = getProvider().getEventLayout(event.getTrace());
+        if (!event.getName().equals(eventLayout.eventSchedProcessWaking())) {
+            popInterruptContext(event, Context.IRQ);
         }
     }
 }
