@@ -146,6 +146,8 @@ public class EventContextHandler extends BaseHandler {
     }
 
     private void handleIrqExit(ITmfEvent event) {
+        // Pop the IRQ first
+        popInterruptContext(event, Context.IRQ);
         // This is an irq exit, check the return value to see if there is a pending waking
         ITmfEventField content = event.getContent();
         if (content != null) {
@@ -155,12 +157,10 @@ public class EventContextHandler extends BaseHandler {
                 TraceCpu hostCpu = TraceCpu.create(event);
                 if (hostCpu != null) {
                     fPendingContexts.add(hostCpu);
-                    return;
+                    pushInterruptContext(event, Context.IRQ_EXTENDED);
                 }
             }
         }
-        // No pending waking expected, just exit the context
-        popInterruptContext(event, Context.IRQ);
     }
 
     private void wakingInContext(ITmfEvent event) {
@@ -176,7 +176,7 @@ public class EventContextHandler extends BaseHandler {
         // If this event is a waking event, stay in context for this event, otherwise, pop the context
         IKernelAnalysisEventLayout eventLayout = getProvider().getEventLayout(event.getTrace());
         if (!event.getName().equals(eventLayout.eventSchedProcessWaking())) {
-            popInterruptContext(event, Context.IRQ);
+            popInterruptContext(event, Context.IRQ_EXTENDED);
         }
     }
 }

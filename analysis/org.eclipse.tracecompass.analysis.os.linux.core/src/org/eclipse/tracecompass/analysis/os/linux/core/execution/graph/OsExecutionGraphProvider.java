@@ -75,6 +75,9 @@ public class OsExecutionGraphProvider extends AbstractTmfGraphProvider {
         HRTIMER,
         /** The inter-processor interrupt */
         IPI,
+        /** An extension of the IRQ context when a wakeup is expected to come after
+         * @since 3.0 */
+        IRQ_EXTENDED
     }
 
     /**

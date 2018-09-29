@@ -280,6 +280,9 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         case NONE:
             none(ts, target, current);
             break;
+        case IRQ_EXTENDED:
+            irqExtended(event, graph, cpu, eventLayout, ts, target, context);
+            break;
         default:
             break;
         }
@@ -323,6 +326,27 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         if (link != null) {
             Integer vec = context.getEvent().getContent().getFieldValue(Integer.class, eventLayout.fieldIrq());
             link.setType(resolveIRQ(vec));
+        }
+    }
+
+    private void irqExtended(ITmfEvent event, TmfGraph graph, Integer cpu, IKernelAnalysisEventLayout eventLayout, long ts, OsWorker target, OsInterruptContext context) {
+        TmfVertex wup = new TmfVertex(ts);
+        TmfEdge link = graph.append(target, wup);
+        if (link != null) {
+            Integer vec = context.getEvent().getContent().getFieldValue(Integer.class, eventLayout.fieldIrq());
+            link.setType(resolveIRQ(vec));
+        }
+        // special case for network related softirq
+        // create edge if wake up is caused by incoming packet
+        OsWorker k = getOrCreateKernelWorker(event, cpu);
+        TmfVertex tail = graph.getTail(k);
+        if (tail == null) {
+            TmfVertex kwup = new TmfVertex(ts);
+            graph.append(k, kwup);
+            kwup.linkVertical(wup);
+        } else if (tail.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE) != null) {
+            TmfVertex kwup = stateExtend(k, event.getTimestamp().getValue());
+            kwup.linkVertical(wup);
         }
     }
 
