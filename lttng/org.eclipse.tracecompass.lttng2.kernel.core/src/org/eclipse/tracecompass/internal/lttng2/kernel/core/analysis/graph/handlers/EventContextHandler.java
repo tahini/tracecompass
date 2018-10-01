@@ -22,6 +22,7 @@ import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsInterru
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsExecutionGraphProvider;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsSystemModel;
+import org.eclipse.tracecompass.analysis.os.linux.core.model.HostThread;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsExecutionGraphProvider.Context;
 import org.eclipse.tracecompass.analysis.os.linux.core.trace.IKernelAnalysisEventLayout;
 import org.eclipse.tracecompass.common.core.NonNullUtils;
@@ -51,6 +52,7 @@ public class EventContextHandler extends BaseHandler {
     private final Consumer<ITmfEvent> fIrqHandlerExit = event -> handleIrqExit(event);
     private final Consumer<ITmfEvent> fIpiEntry = event -> pushInterruptContext(event, Context.IPI);
     private final Consumer<ITmfEvent> fIpiExit = event -> popInterruptContext(event, Context.IPI);
+    private final Consumer<ITmfEvent> fSchedSwitch = event -> handleSchedSwitch(event);
 
     private static class TraceCpu {
 
@@ -123,6 +125,7 @@ public class EventContextHandler extends BaseHandler {
         for (String ipiName : eventLayout.getIPIIrqVectorsEntries()) {
             fHandlers.put(ipiName, fIpiExit);
         }
+        fHandlers.put(eventLayout.eventSchedSwitch(), fSchedSwitch);
     }
 
     private void pushInterruptContext(ITmfEvent event, Context ctx) {
@@ -178,5 +181,27 @@ public class EventContextHandler extends BaseHandler {
         if (!event.getName().equals(eventLayout.eventSchedProcessWaking())) {
             popInterruptContext(event, Context.IRQ_EXTENDED);
         }
+    }
+
+    private void handleSchedSwitch(ITmfEvent event) {
+        IKernelAnalysisEventLayout eventLayout = getProvider().getEventLayout(event.getTrace());
+        OsSystemModel system = getProvider().getSystem();
+        ITmfEventField content = event.getContent();
+
+        Integer next = content.getFieldValue(Integer.class, eventLayout.fieldNextTid());
+        Integer prev = content.getFieldValue(Integer.class, eventLayout.fieldPrevTid());
+        if (next != null) {
+            HostThread ht = new HostThread(event.getTrace().getHostId(), next);
+            if (system.isIrqWorker(ht)) {
+                pushInterruptContext(event, Context.THREADED_IRQ);
+            }
+        }
+        if (prev != null) {
+            HostThread ht = new HostThread(event.getTrace().getHostId(), prev);
+            if (system.isIrqWorker(ht)) {
+                popInterruptContext(event, Context.THREADED_IRQ);
+            }
+        }
+
     }
 }

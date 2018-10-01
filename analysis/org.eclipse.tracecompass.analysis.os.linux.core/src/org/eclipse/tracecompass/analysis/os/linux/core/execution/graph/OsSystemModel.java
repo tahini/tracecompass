@@ -9,8 +9,10 @@
 
 package org.eclipse.tracecompass.analysis.os.linux.core.execution.graph;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Stack;
@@ -39,6 +41,7 @@ public class OsSystemModel {
     private final Table<String, Integer, HostThread> fCurrentTids = HashBasedTable.create();
     private final Table<String, Integer, Stack<OsInterruptContext>> fIntCtxStacks = HashBasedTable.create();
     private final Map<HostThread, OsWorker> fWorkerMap = new HashMap<>();
+    private final List<HostThread> fIrqThreads = new ArrayList<>();
 
     /**
      * Cache the TID currently on the CPU of a host, for easier access later on
@@ -163,6 +166,30 @@ public class OsSystemModel {
             return null;
         }
         return stack.pop();
+    }
+
+    /**
+     * Indicate that a task is an IRQ thread
+     *
+     * @param task
+     *            The IRQ thread
+     * @since 3.0
+     */
+    public void addIrqWorker(HostThread task) {
+        fIrqThreads.add(task);
+    }
+
+    /**
+     * Return whether a thread is an IRQ thread
+     *
+     * @param ht
+     *            The thread to verify
+     * @return <code>true</code> if the thread is an IRQ thread,
+     *         <code>false</code> otherwise
+     * @since 3.0
+     */
+    public boolean isIrqWorker(HostThread ht) {
+        return fIrqThreads.contains(ht);
     }
 
 }

@@ -98,6 +98,17 @@ public interface IKernelAnalysisEventLayout {
     String eventSoftIrqRaise();
 
     /**
+     * Optional event used by some tracers to provide information on interrupts
+     *
+     * @return The event name or <code>null</code> if not supported
+     * @since 3.0
+     */
+    default @Nullable String eventStatedumpInterrupt() {
+        return null;
+    }
+
+
+    /**
      * The scheduler will call a scheduler switch event when it is removing a
      * task from a cpu and placing another one in its place. Which task and when
      * depend on the scheduling strategy and the task priorities. This is a

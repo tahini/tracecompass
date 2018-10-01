@@ -283,9 +283,30 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         case IRQ_EXTENDED:
             irqExtended(event, graph, cpu, eventLayout, ts, target, context);
             break;
+        case THREADED_IRQ:
+            threadedIrq(graph, ts, target, current);
+            break;
         default:
             break;
         }
+    }
+
+    private void threadedIrq(TmfGraph graph, long ts, OsWorker target, @Nullable OsWorker current) {
+        TmfVertex wup = new TmfVertex(ts);
+        TmfEdge l2 = graph.append(target, wup);
+        if (l2 != null) {
+            if (current != null) {
+                l2.setType(EdgeType.BLOCKED, current.getName());
+            } else {
+                l2.setType(EdgeType.BLOCKED);
+            }
+        }
+
+        if (current == null) {
+            return;
+        }
+        TmfVertex irqWup = stateExtend(current, ts);
+        irqWup.linkVertical(wup);
     }
 
     private void softIrq(ITmfEvent event, TmfGraph graph, Integer cpu, IKernelAnalysisEventLayout eventLayout, long ts, OsWorker target, OsInterruptContext context) {
@@ -414,13 +435,21 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         OsWorker receiver = null;
         if (context == Context.SOFTIRQ || context == Context.IRQ) {
             receiver = getOrCreateKernelWorker(event, cpu);
-        } else if (context == Context.NONE) {
+        } else if (context == Context.THREADED_IRQ) {
             receiver = system.getWorkerOnCpu(event.getTrace().getHostId(), cpu);
         }
         if (receiver == null) {
             return;
         }
-        TmfVertex endpoint = stateExtend(receiver, event.getTimestamp().getValue());
+        TmfVertex endpoint;
+        if (context != Context.THREADED_IRQ) {
+            endpoint = stateExtend(receiver, event.getTimestamp().getValue());
+        } else {
+            // Special case for threaded IRQ, set the state as blocked to any wakeup
+            TmfGraph graph = NonNullUtils.checkNotNull(getProvider().getAssignedGraph());
+            endpoint = new TmfVertex(event.getTimestamp().getValue());
+            graph.append(receiver, endpoint, EdgeType.BLOCKED);
+        }
         fTcpNodes.put(new DependencyEvent(event), endpoint);
         // TODO add actual progress monitor
         fTcpMatching.matchEvent(event, event.getTrace(), DEFAULT_PROGRESS_MONITOR);

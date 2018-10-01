@@ -39,6 +39,7 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
     private static final String SOFTIRQ_ENTRY = "softirq_entry";
     private static final String SOFTIRQ_EXIT = "softirq_exit";
     private static final String SOFTIRQ_RAISE = "softirq_raise";
+    private static final String LTTNG_STATEDUMP_INTERRUPT = "lttng_statedump_interrupt";
     private static final String HRTIMER_START = "hrtimer_start";
     private static final String HRTIMER_CANCEL = "hrtimer_cancel";
     private static final String HRTIMER_EXPIRE_ENTRY = "hrtimer_expire_entry";
@@ -164,6 +165,11 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
     @Override
     public String eventSoftIrqRaise() {
         return SOFTIRQ_RAISE;
+    }
+
+    @Override
+    public @NonNull String eventStatedumpInterrupt() {
+        return LTTNG_STATEDUMP_INTERRUPT;
     }
 
     @Override

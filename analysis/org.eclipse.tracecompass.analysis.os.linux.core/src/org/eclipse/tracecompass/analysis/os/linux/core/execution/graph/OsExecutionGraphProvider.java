@@ -77,7 +77,12 @@ public class OsExecutionGraphProvider extends AbstractTmfGraphProvider {
         IPI,
         /** An extension of the IRQ context when a wakeup is expected to come after
          * @since 3.0 */
-        IRQ_EXTENDED
+        IRQ_EXTENDED,
+        /**
+         * Indicate that the running thread is an IRQ thread
+         * @since 3.0
+         */
+        THREADED_IRQ
     }
 
     /**
@@ -129,7 +134,7 @@ public class OsExecutionGraphProvider extends AbstractTmfGraphProvider {
         for (Object k : keys) {
             if (k instanceof OsWorker) {
                 OsWorker w = (OsWorker) k;
-                if (w.getHostThread().getTid() == -1) {
+                if (w.getHostThread().getTid() == -1 || getSystem().isIrqWorker(w.getHostThread())) {
                     kernelWorker.add(w);
                 }
             }
