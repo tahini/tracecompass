@@ -442,14 +442,15 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
             return;
         }
         TmfVertex endpoint;
-        if (context != Context.THREADED_IRQ) {
-            endpoint = stateExtend(receiver, event.getTimestamp().getValue());
-        } else {
-            // Special case for threaded IRQ, set the state as blocked to any wakeup
-            TmfGraph graph = NonNullUtils.checkNotNull(getProvider().getAssignedGraph());
-            endpoint = new TmfVertex(event.getTimestamp().getValue());
-            graph.append(receiver, endpoint, EdgeType.BLOCKED);
-        }
+        endpoint = stateExtend(receiver, event.getTimestamp().getValue());
+//        if (context != Context.THREADED_IRQ) {
+//            endpoint = stateExtend(receiver, event.getTimestamp().getValue());
+//        } else {
+//            // Special case for threaded IRQ, set the state as blocked to any wakeup
+//            TmfGraph graph = NonNullUtils.checkNotNull(getProvider().getAssignedGraph());
+//            endpoint = new TmfVertex(event.getTimestamp().getValue());
+//            graph.append(receiver, endpoint, EdgeType.RUNNING);
+//        }
         fTcpNodes.put(new DependencyEvent(event), endpoint);
         // TODO add actual progress monitor
         fTcpMatching.matchEvent(event, event.getTrace(), DEFAULT_PROGRESS_MONITOR);

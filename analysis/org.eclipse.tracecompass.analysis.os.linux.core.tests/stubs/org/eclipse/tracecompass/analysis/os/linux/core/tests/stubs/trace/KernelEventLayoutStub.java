@@ -11,6 +11,7 @@ package org.eclipse.tracecompass.analysis.os.linux.core.tests.stubs.trace;
 
 import java.util.Collection;
 
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.os.linux.core.trace.DefaultEventLayout;
 
 import com.google.common.collect.ImmutableList;
@@ -45,12 +46,17 @@ public class KernelEventLayoutStub extends DefaultEventLayout {
 
     @Override
     public Collection<String> eventsNetworkSend() {
-        return ImmutableList.of("net_dev_queue");
+        return ImmutableList.of("packet_sent");
     }
 
     @Override
     public Collection<String> eventsNetworkReceive() {
-        return ImmutableList.of("net_if_receive_skb");
+        return ImmutableList.of("packet_received");
+    }
+
+    @Override
+    public @Nullable String eventStatedumpInterrupt() {
+        return "statedump_interrupt";
     }
 
 }

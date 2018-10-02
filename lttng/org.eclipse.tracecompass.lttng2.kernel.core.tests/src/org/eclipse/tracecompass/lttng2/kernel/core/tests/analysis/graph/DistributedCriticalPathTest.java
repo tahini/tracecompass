@@ -11,42 +11,33 @@ package org.eclipse.tracecompass.lttng2.kernel.core.tests.analysis.graph;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jdt.annotation.NonNull;
-import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfEdge;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfEdge.EdgeType;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfGraph;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfVertex;
-import org.eclipse.tracecompass.analysis.graph.core.base.TmfVertex.EdgeDirection;
 import org.eclipse.tracecompass.analysis.graph.core.building.TmfGraphBuilderModule;
+import org.eclipse.tracecompass.analysis.graph.core.tests.stubs.GraphOps;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsWorker;
 import org.eclipse.tracecompass.analysis.os.linux.core.tests.stubs.trace.TmfXmlKernelTraceStub;
 import org.eclipse.tracecompass.lttng2.kernel.core.tests.Activator;
 import org.eclipse.tracecompass.tmf.core.analysis.IAnalysisModule;
 import org.eclipse.tracecompass.tmf.core.event.ITmfEvent;
-import org.eclipse.tracecompass.tmf.core.event.matching.IEventMatchingKey;
-import org.eclipse.tracecompass.tmf.core.event.matching.ITmfMatchEventDefinition;
-import org.eclipse.tracecompass.tmf.core.event.matching.TmfEventMatching;
-import org.eclipse.tracecompass.tmf.core.event.matching.TmfEventMatching.Direction;
 import org.eclipse.tracecompass.tmf.core.exceptions.TmfTraceException;
 import org.eclipse.tracecompass.tmf.core.signal.TmfTraceOpenedSignal;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceUtils;
 import org.eclipse.tracecompass.tmf.core.trace.experiment.TmfExperiment;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -59,73 +50,6 @@ public class DistributedCriticalPathTest {
     private static final String EXPERIMENT = "CritPathExperiment";
     private static int BLOCK_SIZE = 1000;
     private static final @NonNull String TEST_ANALYSIS_ID = "org.eclipse.tracecompass.analysis.os.linux.execgraph";
-
-    private static class StubEventKey implements IEventMatchingKey {
-
-        private final int fMsgId;
-
-        /**
-         * Constructor
-         *
-         * @param msgId
-         *            A message ID
-         */
-        public StubEventKey(int msgId) {
-            fMsgId = msgId;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(fMsgId);
-        }
-
-        @Override
-        public boolean equals(@Nullable Object o) {
-            if (o instanceof StubEventKey) {
-                StubEventKey key = (StubEventKey) o;
-                return key.fMsgId == fMsgId;
-            }
-            return false;
-        }
-    }
-
-    private static class StubEventMatching implements ITmfMatchEventDefinition {
-
-        @Override
-        public IEventMatchingKey getEventKey(ITmfEvent event) {
-            Integer fieldValue = event.getContent().getFieldValue(Integer.class, "msgid");
-            if (fieldValue == null) {
-                return null;
-            }
-            return new StubEventKey(fieldValue);
-        }
-
-        @Override
-        public boolean canMatchTrace(ITmfTrace trace) {
-            return (trace instanceof TmfXmlKernelTraceStub);
-        }
-
-        @Override
-        public Direction getDirection(ITmfEvent event) {
-            String evname = event.getName();
-            /* Is the event a tcp socket in or out event */
-            if ("net_if_receive_skb".equals(evname)) {
-                return Direction.EFFECT;
-            } else if ("net_dev_queue".equals(evname)) {
-                return Direction.CAUSE;
-            }
-            return null;
-        }
-
-    }
-
-    /**
-     *
-     */
-    @Before
-    public void setUp() {
-        TmfEventMatching.registerMatchObject(new StubEventMatching());
-    }
 
     /**
      * Setup the trace for the tests
@@ -190,10 +114,9 @@ public class DistributedCriticalPathTest {
         assertNotNull(graph);
 
         Set<IGraphWorker> workers = graph.getWorkers();
-        assertEquals(7, workers.size());
+        assertEquals(6, workers.size());
 
         // Prepare a worker map
-        final int swapperThread = 0;
         final int irqThread = 50;
         final int clientThread = 200;
         final int otherClient =  201;
@@ -204,267 +127,67 @@ public class DistributedCriticalPathTest {
         for (IGraphWorker worker : workers) {
             workerMap.put(((OsWorker) worker).getHostThread().getTid(), worker);
         }
-        for (IGraphWorker worker : workers) {
-            assertTrue(worker instanceof OsWorker);
-            OsWorker lttngWorker = (OsWorker) worker;
-            switch (lttngWorker.getHostThread().getTid()) {
-            case swapperThread: {
-                // swapper of wifi trace
-                List<TmfVertex> nodesOf = graph.getNodesOf(lttngWorker);
-                assertEquals(2, nodesOf.size());
-                /* Check first vertice has outgoing edge preempted */
-                TmfVertex v = nodesOf.get(0);
-                assertEquals(15, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                TmfEdge edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
+        // Make the expected graph
+        TmfGraph expected = new TmfGraph();
 
-                /* Check second vertice has outgoing edge running */
-                v = nodesOf.get(1);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(60, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                edge = v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
-            }
-                break;
-            case irqThread: {
-                // threaded IRQ thread
-                List<TmfVertex> nodesOf = graph.getNodesOf(lttngWorker);
-                assertEquals(5, nodesOf.size());
+        // other thread on client side
+        IGraphWorker worker = workerMap.get(otherClient);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        expected.append(worker, new TmfVertex(15), EdgeType.PREEMPTED);
+        expected.append(worker, new TmfVertex(60), EdgeType.RUNNING);
 
-                /* Check first vertice has outgoing edge preempted */
-                TmfVertex v = nodesOf.get(0);
-                assertEquals(55, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                TmfEdge edge = v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(workerMap.get(swapperThread), graph.getParentOf(edge.getVertexFrom()));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.PREEMPTED, edge.getType());
+        // client thread
+        worker = workerMap.get(clientThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        TmfVertex packet1Sent = new TmfVertex(13);
+        expected.append(worker, packet1Sent, EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(15), EdgeType.RUNNING);
+        TmfVertex packet2Received = new TmfVertex(70);
+        expected.append(worker, packet2Received, EdgeType.BLOCKED, "wifi");
+        expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
 
-                /* Check second vertice has outgoing edge running */
-                v = nodesOf.get(1);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(60, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
+        // irq thread
+        worker = workerMap.get(irqThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(60));
+        expected.append(worker, new TmfVertex(65), EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(70), EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(75), EdgeType.RUNNING);
 
-                /* Check third vertice has outgoing edge preempted */
-                v = nodesOf.get(2);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(65, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                edge = v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(workerMap.get(serverThread), graph.getParentOf(edge.getVertexFrom()));
-                assertEquals(EdgeType.NETWORK, edge.getType());
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
+        // Other thread on server side
+        worker = workerMap.get(otherServer);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(5));
+        expected.append(worker, new TmfVertex(40), EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(55), EdgeType.PREEMPTED);
 
-                /* Check 4th vertice */
-                v = nodesOf.get(3);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(70, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(workerMap.get(clientThread), graph.getParentOf(edge.getVertexTo()));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
+        // Server thread
+        worker = workerMap.get(serverThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(5));
+        TmfVertex packet1Received = new TmfVertex(35);
+        expected.append(worker, packet1Received, EdgeType.NETWORK);
+        expected.append(worker, new TmfVertex(40), EdgeType.PREEMPTED);
+        TmfVertex packet2Sent = new TmfVertex(45);
+        expected.append(worker, packet2Sent, EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(55), EdgeType.RUNNING);
 
-                /* Check 5th vertice */
-                v = nodesOf.get(4);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(75, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
-            }
-                break;
-            case serverThread: {
-                // server thread of the ethernet trace
-                List<TmfVertex> nodesOf = graph.getNodesOf(lttngWorker);
-                assertEquals(5, nodesOf.size());
+        // Create the vertical links
+        TmfEdge link = packet1Sent.linkVertical(packet1Received);
+        link.setType(EdgeType.NETWORK);
+        link = packet2Sent.linkVertical(packet2Received);
+        link.setType(EdgeType.NETWORK);
 
-                /* Check first vertice has incoming vertical edge */
-                TmfVertex v = nodesOf.get(0);
-                assertEquals(5, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                TmfEdge edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.NETWORK, edge.getType());
+        // kernel worker on server side
+        worker = workerMap.get(kernelThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(30));
+        expected.append(worker, new TmfVertex(33), EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(35), EdgeType.RUNNING);
 
-                /* Check second vertice has incoming vertical edge */
-                v = nodesOf.get(1);
-                assertEquals(35, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.PREEMPTED, edge.getType());
-
-                /* Check third vertice, the process has CPU */
-                v = nodesOf.get(2);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(40, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
-
-                /* Check 4th vertex, from which the packet is sent */
-                v = nodesOf.get(3);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(45, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.NETWORK, edge.getType());
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
-
-                /* Check 5th vertex, the process is sheduled out */
-                v = nodesOf.get(4);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(55, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
-            }
-                break;
-            case otherServer: {
-                // other thread in ethernet trace
-                List<TmfVertex> nodesOf = graph.getNodesOf(lttngWorker);
-                assertEquals(2, nodesOf.size());
-                /* Check first vertice has outgoing edge preempted */
-                TmfVertex v = nodesOf.get(0);
-                assertEquals(5, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                TmfEdge edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
-
-                /* Check second vertex */
-                v = nodesOf.get(1);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(40, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
-            }
-                break;
-            case clientThread: {
-                // client thread of the wifi trace
-                List<TmfVertex> nodesOf = graph.getNodesOf(lttngWorker);
-                assertEquals(5, nodesOf.size());
-                /* Check first vertice has outgoing edge preempted */
-                TmfVertex v = nodesOf.get(0);
-                assertEquals(10, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                TmfEdge edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
-
-                /* Check second vertex, the send */
-                v = nodesOf.get(1);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(13, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.NETWORK, edge.getType());
-                assertEquals(workerMap.get(serverThread), graph.getParentOf(edge.getVertexTo()));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.RUNNING, edge.getType());
-
-                /* Check third vertex, scheduled out */
-                v = nodesOf.get(2);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(15, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.BLOCKED, edge.getType());
-
-                /* Check 4th vertex, woken up */
-                v = nodesOf.get(3);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(70, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                edge = v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.PREEMPTED, edge.getType());
-                assertEquals(workerMap.get(irqThread), graph.getParentOf(edge.getVertexFrom()));
-                edge = v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-                assertNotNull(edge);
-                assertEquals(EdgeType.BLOCKED, edge.getType());
-
-                /* Check 5th vertex, scheduled in */
-                v = nodesOf.get(3);
-                assertEquals(v, edge.getVertexTo());
-                assertEquals(75, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNotNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
-            }
-                break;
-            case otherClient: {
-                // other thread in the wifi trace
-                List<TmfVertex> nodesOf = graph.getNodesOf(lttngWorker);
-                assertEquals(1, nodesOf.size());
-                /* Check first vertice has outgoing edge preempted */
-                TmfVertex v = nodesOf.get(0);
-                assertEquals(5, v.getTs());
-                assertNull(v.getEdge(EdgeDirection.INCOMING_HORIZONTAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE));
-                assertNull(v.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE));
-            }
-                break;
-            case kernelThread:
-                // Kernel thread
-                // Do not test
-                break;
-            default:
-                fail("Unknown worker");
-                break;
-            }
-        }
+        GraphOps.checkEquality(expected, graph);
     }
 
 }
