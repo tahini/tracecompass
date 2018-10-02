@@ -939,4 +939,48 @@ public interface IKernelAnalysisEventLayout {
         return "power_cpu_frequency"; //$NON-NLS-1$
     }
 
+    /**
+     * Get the name of the kernel event marking the entry of the complete IRQ
+     * execution
+     *
+     * @return The name of the do irq entry function
+     * @since 3.0
+     */
+    default String eventDoIrqEntry() {
+        return "do_IRQ_entry"; //$NON-NLS-1$
+    }
+
+    /**
+     * Get the name of the kernel event marking the exit of the complete IRQ
+     * execution
+     *
+     * @return The name of the do irq exit function
+     * @since 3.0
+     */
+    default String eventDoIrqExit() {
+        return "do_IRQ_return"; //$NON-NLS-1$
+    }
+
+    /**
+     * Get the name of the kernel event marking the entry of the complete IRQ
+     * execution
+     *
+     * @return The name of the do irq entry function
+     * @since 3.0
+     */
+    default String eventNetworkReceiveEntry() {
+        return "netif_receive_skb_internal_entry"; //$NON-NLS-1$
+    }
+
+    /**
+     * Get the name of the kernel event marking the exit of the complete IRQ
+     * execution
+     *
+     * @return The name of the do irq exit function
+     * @since 3.0
+     */
+    default String eventNetworkReceiveExit() {
+        return "netif_receive_skb_internal_return"; //$NON-NLS-1$
+    }
+
 }

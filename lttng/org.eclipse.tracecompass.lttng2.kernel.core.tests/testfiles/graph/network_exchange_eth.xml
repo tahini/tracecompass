@@ -12,6 +12,9 @@
 <field name="next_tid" value="101" type="long" />
 <field name="next_prio" value="20" type="long" />
 </event>
+<event timestamp="18" name="do_IRQ_entry">
+<field name="cpu" value="0" type="int" />
+</event>
 <event timestamp="20" name="irq_handler_entry">
 <field name="cpu" value="0" type="int" />
 <field name="irq" value="15" type="long" />
@@ -30,6 +33,9 @@
 <field name="cpu" value="0" type="int" />
 <field name="vec" value="3" type="long" />
 </event>
+<event timestamp="31" name="netif_receive_skb_internal_entry">
+<field name="cpu" value="0" type="int" />
+</event>
 <event timestamp="33" name="packet_received">
 <field name="cpu" value="0" type="int" />
 <field name="msgid" value="1" type="int" />
@@ -41,9 +47,15 @@
 <field name="prio" value="20" type="int" />
 <field name="target_cpu" value="0" type="int" />
 </event>
+<event timestamp="36" name="netif_receive_skb_internal_return">
+<field name="cpu" value="0" type="int" />
+</event>
 <event timestamp="38" name="softirq_exit">
 <field name="cpu" value="0" type="int" />
 <field name="vec" value="3" type="long" />
+</event>
+<event timestamp="39" name="do_IRQ_exit">
+<field name="cpu" value="0" type="int" />
 </event>
 <event timestamp="40" name="sched_switch">
 <field name="cpu" value="0" type="int" />

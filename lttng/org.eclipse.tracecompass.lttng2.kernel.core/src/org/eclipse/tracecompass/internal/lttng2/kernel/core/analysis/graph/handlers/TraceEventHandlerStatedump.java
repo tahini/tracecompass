@@ -49,30 +49,30 @@ public class TraceEventHandlerStatedump extends BaseHandler {
         String eventName = event.getName();
         if (eventName.equals(eventLayout.eventStatedumpProcessState())) {
             handleStatedumpProcessState(event, eventLayout);
-        } else if (eventName.equals(eventLayout.eventStatedumpInterrupt())) {
-            handleStatedumpInterrupt(event);
+//        } else if (eventName.equals(eventLayout.eventStatedumpInterrupt())) {
+//            handleStatedumpInterrupt(event);
         }
 
     }
 
-    private void handleStatedumpInterrupt(ITmfEvent event) {
-        Integer irqThread = event.getContent().getFieldValue(Integer.class, "thread"); //$NON-NLS-1$
-        if (irqThread == null || irqThread <= 0) {
-            return;
-        }
-        OsSystemModel system = getProvider().getSystem();
-
-        HostThread ht = new HostThread(event.getTrace().getHostId(), irqThread);
-        OsWorker task = system.findWorker(ht);
-        if (task == null) {
-            long ts = event.getTimestamp().getValue();
-            String irqAction = event.getContent().getFieldValue(String.class, "action"); //$NON-NLS-1$
-            task = new OsWorker(ht, String.valueOf(irqAction), ts);
-            system.addWorker(task);
-        }
-        System.out.println("Setting thread interrupt: " + ht );
-        system.addIrqWorker(ht);
-    }
+//    private void handleStatedumpInterrupt(ITmfEvent event) {
+//        Integer irqThread = event.getContent().getFieldValue(Integer.class, "thread"); //$NON-NLS-1$
+//        if (irqThread == null || irqThread <= 0) {
+//            return;
+//        }
+//        OsSystemModel system = getProvider().getSystem();
+//
+//        HostThread ht = new HostThread(event.getTrace().getHostId(), irqThread);
+//        OsWorker task = system.findWorker(ht);
+//        if (task == null) {
+//            long ts = event.getTimestamp().getValue();
+//            String irqAction = event.getContent().getFieldValue(String.class, "action"); //$NON-NLS-1$
+//            task = new OsWorker(ht, String.valueOf(irqAction), ts);
+//            system.addWorker(task);
+//        }
+//        System.out.println("Setting thread interrupt: " + ht );
+//        system.addIrqWorker(ht);
+//    }
 
     private void handleStatedumpProcessState(ITmfEvent event, IKernelAnalysisEventLayout eventLayout) {
         OsSystemModel system = getProvider().getSystem();

@@ -280,33 +280,55 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         case NONE:
             none(ts, target, current);
             break;
-        case IRQ_EXTENDED:
+        case COMPLETE_IRQ:
             irqExtended(event, graph, cpu, eventLayout, ts, target, context);
             break;
-        case THREADED_IRQ:
-            threadedIrq(graph, ts, target, current);
+        case PACKET_RECEPTION:
+            receivingFromNetwork(graph, ts, target, current);
             break;
         default:
             break;
         }
     }
 
-    private void threadedIrq(TmfGraph graph, long ts, OsWorker target, @Nullable OsWorker current) {
+    private void receivingFromNetwork(TmfGraph graph, long ts, OsWorker target, @Nullable OsWorker current) {
         TmfVertex wup = new TmfVertex(ts);
         TmfEdge l2 = graph.append(target, wup);
         if (l2 != null) {
             if (current != null) {
-                l2.setType(EdgeType.BLOCKED, current.getName());
+                l2.setType(EdgeType.NETWORK, current.getName());
             } else {
-                l2.setType(EdgeType.BLOCKED);
+                l2.setType(EdgeType.NETWORK);
             }
         }
 
         if (current == null) {
             return;
         }
-        TmfVertex irqWup = stateExtend(current, ts);
-        irqWup.linkVertical(wup);
+        // See if we can directly link from the packet reception.
+        TmfVertex tail = graph.getTail(current);
+        if (tail == null) {
+            TmfVertex kwup = new TmfVertex(ts);
+            graph.append(current, kwup);
+            kwup.linkVertical(wup);
+        } else if (tail.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE) != null) {
+            TmfEdge edge = tail.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE);
+            // Replace that network edge and point directly to wake up
+            if (edge != null && edge.getType() == EdgeType.NETWORK) {
+                TmfEdge linkVertical = edge.getVertexFrom().linkVertical(wup);
+                linkVertical.setType(EdgeType.NETWORK);
+                tail.removeEdge(EdgeDirection.INCOMING_VERTICAL_EDGE);
+            } else {
+                // Simply add the wakeup link
+                TmfVertex kwup = stateExtend(current, ts);
+                kwup.linkVertical(wup);
+            }
+        } else {
+            // Simply add the wakup link to current
+            TmfVertex irqWup = stateExtend(current, ts);
+            irqWup.linkVertical(wup);
+        }
+
     }
 
     private void softIrq(ITmfEvent event, TmfGraph graph, Integer cpu, IKernelAnalysisEventLayout eventLayout, long ts, OsWorker target, OsInterruptContext context) {
@@ -435,7 +457,7 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         OsWorker receiver = null;
         if (context == Context.SOFTIRQ || context == Context.IRQ) {
             receiver = getOrCreateKernelWorker(event, cpu);
-        } else if (context == Context.THREADED_IRQ) {
+        } else if (context == Context.PACKET_RECEPTION) {
             receiver = system.getWorkerOnCpu(event.getTrace().getHostId(), cpu);
         }
         if (receiver == null) {

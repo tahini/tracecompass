@@ -145,7 +145,7 @@ public class DistributedCriticalPathTest {
         expected.append(worker, packet1Sent, EdgeType.RUNNING);
         expected.append(worker, new TmfVertex(15), EdgeType.RUNNING);
         TmfVertex packet2Received = new TmfVertex(70);
-        expected.append(worker, packet2Received, EdgeType.BLOCKED, "wifi");
+        expected.append(worker, packet2Received, EdgeType.NETWORK, "wifi");
         expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
 
         // irq thread
