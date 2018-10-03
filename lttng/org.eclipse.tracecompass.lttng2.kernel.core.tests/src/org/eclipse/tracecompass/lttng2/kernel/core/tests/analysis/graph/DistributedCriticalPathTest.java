@@ -388,4 +388,76 @@ public class DistributedCriticalPathTest {
         }
     }
 
+    /**
+     * Test the graph building of a simple network exchange but without the
+     * other machine's trace. The process should be blocked by network
+     *
+     * @throws TmfTraceException
+     *             Exception thrown by opening experiment
+     * @throws TmfAnalysisException
+     *             Exception thrown by analyses
+     */
+    @Test
+    public void testNetworkExchangeOneTrace() throws TmfTraceException, TmfAnalysisException {
+        ITmfTrace experiment = setUpExperiment("testfiles/graph/network_exchange_wifi.xml");
+        assertNotNull(experiment);
+        try {
+            internalTestNetworkExchangeOneTrace(experiment);
+        } finally {
+            experiment.dispose();
+        }
+    }
+
+    private static void internalTestNetworkExchangeOneTrace(@NonNull ITmfTrace experiment) throws TmfAnalysisException {
+        TmfGraphBuilderModule module = TmfTraceUtils.getAnalysisModuleOfClass(experiment, TmfGraphBuilderModule.class, TEST_ANALYSIS_ID);
+        assertNotNull(module);
+        module.schedule();
+        assertTrue(module.waitForCompletion());
+
+        TmfGraph graph = module.getGraph();
+        assertNotNull(graph);
+
+        Set<IGraphWorker> workers = graph.getWorkers();
+        assertEquals(3, workers.size());
+
+        // Prepare a worker map
+        final int irqThread = 50;
+        final int clientThread = 200;
+        final int otherClient = 201;
+        Map<Integer, IGraphWorker> workerMap = new HashMap<>();
+        for (IGraphWorker worker : workers) {
+            workerMap.put(((OsWorker) worker).getHostThread().getTid(), worker);
+        }
+        // Make the expected graph
+        TmfGraph expected = new TmfGraph();
+
+        // other thread on client side
+        IGraphWorker worker = workerMap.get(otherClient);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        expected.append(worker, new TmfVertex(15), EdgeType.PREEMPTED);
+        expected.append(worker, new TmfVertex(60), EdgeType.RUNNING);
+
+        // client thread
+        worker = workerMap.get(clientThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        TmfVertex packet1Sent = new TmfVertex(13);
+        expected.append(worker, packet1Sent, EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(15), EdgeType.RUNNING);
+        TmfVertex packet2Received = new TmfVertex(70);
+        expected.append(worker, packet2Received, EdgeType.NETWORK, "irq/30-handler");
+        expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
+
+        // irq thread
+        worker = workerMap.get(irqThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(55));
+        expected.append(worker, new TmfVertex(60), EdgeType.PREEMPTED);
+        expected.append(worker, new TmfVertex(65), EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(75), EdgeType.RUNNING);
+
+        GraphOps.checkEquality(expected, graph);
+    }
+
 }

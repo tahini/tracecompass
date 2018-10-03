@@ -49,42 +49,6 @@ public class EventContextHandler extends BaseHandler {
     private final Consumer<ITmfEvent> fCompleteHandlerExit = event -> popInterruptContext(event, Context.COMPLETE_IRQ);
     private final Consumer<ITmfEvent> fPacketReceptionEntry = event -> pushInterruptContext(event, Context.PACKET_RECEPTION);
     private final Consumer<ITmfEvent> fPacketReceptionExit = event -> popInterruptContext(event, Context.PACKET_RECEPTION);
-//    private final Consumer<ITmfEvent> fSchedSwitch = event -> handleSchedSwitch(event);
-
-//    private static class TraceCpu {
-//
-//        private final ITmfTrace fTrace;
-//        private final Integer fCpu;
-//
-//        public TraceCpu(ITmfTrace trace, Integer cpu) {
-//            fTrace = trace;
-//            fCpu = cpu;
-//        }
-//
-//        @Override
-//        public int hashCode() {
-//            return Objects.hash(fTrace, fCpu);
-//        }
-//
-//        @Override
-//        public boolean equals(@Nullable Object obj) {
-//            if (!(obj instanceof TraceCpu)) {
-//                return false;
-//            }
-//            TraceCpu other = (TraceCpu) obj;
-//            return Objects.equals(this.fTrace, other.fTrace) && fCpu == other.fCpu;
-//        }
-//
-//        public static @Nullable TraceCpu create(ITmfEvent event) {
-//            Integer cpu = TmfTraceUtils.resolveIntEventAspectOfClassForEvent(event.getTrace(), TmfCpuAspect.class, event);
-//            if (cpu == null) {
-//                return null;
-//            }
-//            return new TraceCpu(event.getTrace(), cpu);
-//        }
-//    }
-//
-//    private final List<TraceCpu> fPendingContexts = new ArrayList<>();
 
     /**
      * Constructor
@@ -148,60 +112,4 @@ public class EventContextHandler extends BaseHandler {
         }
     }
 
-//    private void handleIrqExit(ITmfEvent event) {
-//        // Pop the IRQ first
-//        popInterruptContext(event, Context.IRQ);
-//        // This is an irq exit, check the return value to see if there is a pending waking
-//        ITmfEventField content = event.getContent();
-//        if (content != null) {
-//            Integer fieldValue = content.getFieldValue(Integer.class, "ret"); //$NON-NLS-1$
-//            if (fieldValue != null && fieldValue == 2) {
-//                // Stay in context and note a pending waking on that CPU
-//                TraceCpu hostCpu = TraceCpu.create(event);
-//                if (hostCpu != null) {
-//                    fPendingContexts.add(hostCpu);
-//                    pushInterruptContext(event, Context.IRQ_EXTENDED);
-//                }
-//            }
-//        }
-//    }
-
-//    private void wakingInContext(ITmfEvent event) {
-//        if (fPendingContexts.isEmpty()) {
-//            // No pending contexts, do nothing
-//            return;
-//        }
-//        TraceCpu hostCpu = TraceCpu.create(event);
-//        if (hostCpu == null || !fPendingContexts.contains(hostCpu)) {
-//            // There is no trace CPU, or this CPU is not waiting for action
-//            return;
-//        }
-//        // If this event is a waking event, stay in context for this event, otherwise, pop the context
-//        IKernelAnalysisEventLayout eventLayout = getProvider().getEventLayout(event.getTrace());
-//        if (!event.getName().equals(eventLayout.eventSchedProcessWaking())) {
-//            popInterruptContext(event, Context.IRQ_EXTENDED);
-//        }
-//    }
-
-//    private void handleSchedSwitch(ITmfEvent event) {
-//        IKernelAnalysisEventLayout eventLayout = getProvider().getEventLayout(event.getTrace());
-//        OsSystemModel system = getProvider().getSystem();
-//        ITmfEventField content = event.getContent();
-//
-//        Integer next = content.getFieldValue(Integer.class, eventLayout.fieldNextTid());
-//        Integer prev = content.getFieldValue(Integer.class, eventLayout.fieldPrevTid());
-//        if (next != null) {
-//            HostThread ht = new HostThread(event.getTrace().getHostId(), next);
-//            if (system.isIrqWorker(ht)) {
-//                pushInterruptContext(event, Context.THREADED_IRQ);
-//            }
-//        }
-//        if (prev != null) {
-//            HostThread ht = new HostThread(event.getTrace().getHostId(), prev);
-//            if (system.isIrqWorker(ht)) {
-//                popInterruptContext(event, Context.THREADED_IRQ);
-//            }
-//        }
-//
-//    }
 }

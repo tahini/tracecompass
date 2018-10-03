@@ -318,13 +318,8 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         // See if we can directly link from the packet reception.
         TmfVertex tail = graph.getTail(source);
         if (tail != null && tail.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE) != null) {
-            if (!replaceIncomingNetworkEdge(tail, wupTarget)) {
-                extendAndLink(source, ts, wupTarget);
-            }
-        } else {
-            extendAndLink(source, ts, wupTarget);
+            replaceIncomingNetworkEdge(tail, wupTarget);
         }
-
     }
 
     private static boolean replaceIncomingNetworkEdge(TmfVertex tail, TmfVertex wupTarget) {
@@ -517,6 +512,9 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
 
         OsInterruptContext intCtx = system.peekContextStack(host, cpu);
         Context context = intCtx.getContext();
+        if (context == Context.PACKET_RECEPTION) {
+            context = peekInnerContext(host, cpu, system);
+        }
 
         OsWorker sender = null;
         if (context == Context.NONE) {
