@@ -76,11 +76,11 @@ public class OsExecutionGraphProvider extends AbstractTmfGraphProvider {
         /** The inter-processor interrupt */
         IPI,
         /** The complete IRQ context, soft and hard IRQ are usually within this context
-         * @since 3.0 */
+         * @since 3.1*/
         COMPLETE_IRQ,
         /**
          * The context of packet reception
-         * @since 3.0
+         * @since 3.1
          */
         PACKET_RECEPTION
     }

@@ -27,12 +27,14 @@ import org.eclipse.tracecompass.analysis.graph.core.base.TmfEdge.EdgeType;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfGraph;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfVertex;
 import org.eclipse.tracecompass.analysis.graph.core.building.TmfGraphBuilderModule;
+import org.eclipse.tracecompass.analysis.graph.core.criticalpath.CriticalPathModule;
 import org.eclipse.tracecompass.analysis.graph.core.tests.stubs.GraphOps;
 import org.eclipse.tracecompass.analysis.os.linux.core.execution.graph.OsWorker;
 import org.eclipse.tracecompass.analysis.os.linux.core.tests.stubs.trace.TmfXmlKernelTraceStub;
 import org.eclipse.tracecompass.lttng2.kernel.core.tests.Activator;
 import org.eclipse.tracecompass.tmf.core.analysis.IAnalysisModule;
 import org.eclipse.tracecompass.tmf.core.event.ITmfEvent;
+import org.eclipse.tracecompass.tmf.core.exceptions.TmfAnalysisException;
 import org.eclipse.tracecompass.tmf.core.exceptions.TmfTraceException;
 import org.eclipse.tracecompass.tmf.core.signal.TmfTraceOpenedSignal;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
@@ -88,23 +90,26 @@ public class DistributedCriticalPathTest {
 
     /**
      * Test the graph building of a simple network exchange where one machine
-     * receives in a softirq and the other receives in a threaded IRQ
+     * receives in a softirq and the other receives in a threaded IRQ, with new
+     * network reception events
      *
      * @throws TmfTraceException
      *             Exception thrown by opening experiment
+     * @throws TmfAnalysisException
+     *             Exception thrown by analyses
      */
     @Test
-    public void testNetworkExchange() throws TmfTraceException {
+    public void testNetworkExchangeWithWifi() throws TmfTraceException, TmfAnalysisException {
         ITmfTrace experiment = setUpExperiment("testfiles/graph/network_exchange_eth.xml", "testfiles/graph/network_exchange_wifi.xml");
         assertNotNull(experiment);
         try {
-            internalTestNetworkExchange(experiment);
+            internalTestNetworkExchangeWithWifi(experiment);
         } finally {
             experiment.dispose();
         }
     }
 
-    private static void internalTestNetworkExchange(@NonNull ITmfTrace experiment) {
+    private static void internalTestNetworkExchangeWithWifi(@NonNull ITmfTrace experiment) throws TmfAnalysisException {
         TmfGraphBuilderModule module = TmfTraceUtils.getAnalysisModuleOfClass(experiment, TmfGraphBuilderModule.class, TEST_ANALYSIS_ID);
         assertNotNull(module);
         module.schedule();
@@ -119,7 +124,7 @@ public class DistributedCriticalPathTest {
         // Prepare a worker map
         final int irqThread = 50;
         final int clientThread = 200;
-        final int otherClient =  201;
+        final int otherClient = 201;
         final int serverThread = 100;
         final int otherServer = 101;
         final int kernelThread = -1;
@@ -145,15 +150,15 @@ public class DistributedCriticalPathTest {
         expected.append(worker, packet1Sent, EdgeType.RUNNING);
         expected.append(worker, new TmfVertex(15), EdgeType.RUNNING);
         TmfVertex packet2Received = new TmfVertex(70);
-        expected.append(worker, packet2Received, EdgeType.NETWORK, "wifi");
+        expected.append(worker, packet2Received, EdgeType.NETWORK, "irq/30-handler");
         expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
 
         // irq thread
         worker = workerMap.get(irqThread);
         assertNotNull(worker);
-        expected.add(worker, new TmfVertex(60));
+        expected.add(worker, new TmfVertex(55));
+        expected.append(worker, new TmfVertex(60), EdgeType.PREEMPTED);
         expected.append(worker, new TmfVertex(65), EdgeType.RUNNING);
-        expected.append(worker, new TmfVertex(70), EdgeType.RUNNING);
         expected.append(worker, new TmfVertex(75), EdgeType.RUNNING);
 
         // Other thread on server side
@@ -185,9 +190,202 @@ public class DistributedCriticalPathTest {
         assertNotNull(worker);
         expected.add(worker, new TmfVertex(30));
         expected.append(worker, new TmfVertex(33), EdgeType.RUNNING);
-        expected.append(worker, new TmfVertex(35), EdgeType.RUNNING);
 
         GraphOps.checkEquality(expected, graph);
+
+        // Test the critical path
+
+        // Build the expected critical path
+        expected = new TmfGraph();
+        worker = workerMap.get(clientThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        expected.append(worker, new TmfVertex(13), EdgeType.RUNNING);
+        packet1Sent = new TmfVertex(15);
+        expected.append(worker, packet1Sent, EdgeType.RUNNING);
+        packet2Received = new TmfVertex(70);
+        expected.add(worker, packet2Received);
+        expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
+
+        worker = workerMap.get(serverThread);
+        assertNotNull(worker);
+        packet1Received = new TmfVertex(35);
+        expected.add(worker, packet1Received);
+        expected.append(worker, new TmfVertex(40), EdgeType.PREEMPTED);
+        packet2Sent = new TmfVertex(45);
+        expected.append(worker, packet2Sent, EdgeType.RUNNING);
+
+        link = packet1Sent.linkVertical(packet1Received);
+        link.setType(EdgeType.NETWORK);
+        link = packet2Sent.linkVertical(packet2Received);
+        link.setType(EdgeType.NETWORK);
+
+        CriticalPathModule critPathModule = new CriticalPathModule(module);
+        try {
+            critPathModule.setTrace(experiment);
+            critPathModule.setParameter(CriticalPathModule.PARAM_WORKER, workerMap.get(clientThread));
+            critPathModule.schedule();
+            assertTrue(critPathModule.waitForCompletion());
+
+            TmfGraph criticalPath = critPathModule.getCriticalPath();
+            assertNotNull(criticalPath);
+
+            GraphOps.checkEquality(expected, criticalPath);
+        } finally {
+            critPathModule.dispose();
+        }
+    }
+
+    /**
+     * Test the graph building of a simple network exchange where both machines receive in softirqs
+     *
+     * @throws TmfTraceException
+     *             Exception thrown by opening experiment
+     * @throws TmfAnalysisException
+     *             Exception thrown by analyses
+     */
+    @Test
+    public void testNetworkExchange() throws TmfTraceException, TmfAnalysisException {
+        ITmfTrace experiment = setUpExperiment("testfiles/graph/simple_network_server.xml", "testfiles/graph/simple_network_client.xml");
+        assertNotNull(experiment);
+        try {
+            internalTestNetworkExchange(experiment);
+        } finally {
+            experiment.dispose();
+        }
+    }
+
+    private static void internalTestNetworkExchange(@NonNull ITmfTrace experiment) throws TmfAnalysisException {
+        TmfGraphBuilderModule module = TmfTraceUtils.getAnalysisModuleOfClass(experiment, TmfGraphBuilderModule.class, TEST_ANALYSIS_ID);
+        assertNotNull(module);
+        module.schedule();
+        assertTrue(module.waitForCompletion());
+
+        TmfGraph graph = module.getGraph();
+        assertNotNull(graph);
+
+        Set<IGraphWorker> workers = graph.getWorkers();
+        assertEquals(6, workers.size());
+
+        // Prepare a worker map
+        final int clientThread = 200;
+        final int otherClient = 201;
+        final int serverThread = 100;
+        final int otherServer = 101;
+        OsWorker clientWorker = null;
+        OsWorker serverWorker = null;
+        Map<Integer, IGraphWorker> workerMap = new HashMap<>();
+        for (IGraphWorker worker : workers) {
+            OsWorker osWorker = (OsWorker) worker;
+            if (osWorker.getHostThread().getTid() < 0) {
+                if (osWorker.getHostId().equals("simple_network_server.xml")) {
+                    serverWorker = osWorker;
+                } else {
+                    clientWorker = osWorker;
+                }
+            }
+            workerMap.put(osWorker.getHostThread().getTid(), worker);
+        }
+        // Make the expected graph
+        TmfGraph expected = new TmfGraph();
+
+        // other thread on client side
+        IGraphWorker worker = workerMap.get(otherClient);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        expected.append(worker, new TmfVertex(15), EdgeType.PREEMPTED);
+        expected.append(worker, new TmfVertex(75), EdgeType.RUNNING);
+
+        // client thread
+        worker = workerMap.get(clientThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        TmfVertex packet1Sent = new TmfVertex(13);
+        expected.append(worker, packet1Sent, EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(15), EdgeType.RUNNING);
+        TmfVertex packet2Received = new TmfVertex(70);
+        expected.append(worker, packet2Received, EdgeType.NETWORK);
+        expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
+
+        // client kernel worker
+        worker = clientWorker;
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(60));
+        expected.append(worker, new TmfVertex(65), EdgeType.RUNNING);
+
+        // Other thread on server side
+        worker = workerMap.get(otherServer);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(5));
+        expected.append(worker, new TmfVertex(40), EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(55), EdgeType.PREEMPTED);
+
+        // Server thread
+        worker = workerMap.get(serverThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(5));
+        TmfVertex packet1Received = new TmfVertex(35);
+        expected.append(worker, packet1Received, EdgeType.NETWORK);
+        expected.append(worker, new TmfVertex(40), EdgeType.PREEMPTED);
+        TmfVertex packet2Sent = new TmfVertex(45);
+        expected.append(worker, packet2Sent, EdgeType.RUNNING);
+        expected.append(worker, new TmfVertex(55), EdgeType.RUNNING);
+
+        // Create the vertical links
+        TmfEdge link = packet1Sent.linkVertical(packet1Received);
+        link.setType(EdgeType.NETWORK);
+        link = packet2Sent.linkVertical(packet2Received);
+        link.setType(EdgeType.NETWORK);
+
+        // kernel worker on server side
+        worker = serverWorker;
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(30));
+        expected.append(worker, new TmfVertex(33), EdgeType.RUNNING);
+
+        GraphOps.checkEquality(expected, graph);
+
+        // Test the critical path
+
+        // Build the expected critical path
+        expected = new TmfGraph();
+        worker = workerMap.get(clientThread);
+        assertNotNull(worker);
+        expected.add(worker, new TmfVertex(10));
+        expected.append(worker, new TmfVertex(13), EdgeType.RUNNING);
+        packet1Sent = new TmfVertex(15);
+        expected.append(worker, packet1Sent, EdgeType.RUNNING);
+        packet2Received = new TmfVertex(70);
+        expected.add(worker, packet2Received);
+        expected.append(worker, new TmfVertex(75), EdgeType.PREEMPTED);
+
+        worker = workerMap.get(serverThread);
+        assertNotNull(worker);
+        packet1Received = new TmfVertex(35);
+        expected.add(worker, packet1Received);
+        expected.append(worker, new TmfVertex(40), EdgeType.PREEMPTED);
+        packet2Sent = new TmfVertex(45);
+        expected.append(worker, packet2Sent, EdgeType.RUNNING);
+
+        link = packet1Sent.linkVertical(packet1Received);
+        link.setType(EdgeType.NETWORK);
+        link = packet2Sent.linkVertical(packet2Received);
+        link.setType(EdgeType.NETWORK);
+
+        CriticalPathModule critPathModule = new CriticalPathModule(module);
+        try {
+            critPathModule.setTrace(experiment);
+            critPathModule.setParameter(CriticalPathModule.PARAM_WORKER, workerMap.get(clientThread));
+            critPathModule.schedule();
+            assertTrue(critPathModule.waitForCompletion());
+
+            TmfGraph criticalPath = critPathModule.getCriticalPath();
+            assertNotNull(criticalPath);
+
+            GraphOps.checkEquality(expected, criticalPath);
+        } finally {
+            critPathModule.dispose();
+        }
     }
 
 }

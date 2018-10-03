@@ -46,7 +46,7 @@
 <field name="irq" value="5" type="long" />
 <field name="ret" value="2" type="int" />
 </event>
-<event timestamp="55" name="sched_waking">
+<event timestamp="55" name="sched_wakeup">
 <field name="cpu" value="0" type="int" />
 <field name="comm" value="irq/30-handler" type="string" />
 <field name="tid" value="50" type="long" />
