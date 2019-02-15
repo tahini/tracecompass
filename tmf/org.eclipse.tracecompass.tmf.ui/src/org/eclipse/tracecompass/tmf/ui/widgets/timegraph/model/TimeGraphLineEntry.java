@@ -12,7 +12,6 @@ package org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.TimeGraphEntryModel;
 import org.eclipse.tracecompass.tmf.core.model.tree.ITmfTreeDataModel;
-import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.widgets.ITimeGraphLineEntry;
 
 /**
  * An entry for use in the time graph views
@@ -20,7 +19,7 @@ import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.widgets.ITimeGraphLineE
  * @author Matthew Khouzam
  * @since 4.3
  */
-public class TimeGraphLineEntry extends TimeGraphEntry implements ITimeGraphLineEntry {
+public class TimeGraphLineEntry extends TimeGraphEntry {
 
     /**
      * Constructor
@@ -61,4 +60,10 @@ public class TimeGraphLineEntry extends TimeGraphEntry implements ITimeGraphLine
         }
         super.addEvent(event);
     }
+
+    @Override
+    public DisplayStyle getStyle() {
+        return DisplayStyle.LINE;
+    }
+
 }

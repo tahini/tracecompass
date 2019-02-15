@@ -29,6 +29,15 @@ import org.eclipse.jface.viewers.ISelection;
 public interface ITimeGraphEntry extends ISelection {
 
     /**
+     * @author gbastien
+     * @since 4.3
+     */
+    public enum DisplayStyle {
+        STATE,
+        LINE
+    }
+
+    /**
      * Returns the parent of this entry, or <code>null</code> if it has none.
      *
      * @return the parent element, or <code>null</code> if it has none
@@ -119,5 +128,12 @@ public interface ITimeGraphEntry extends ISelection {
     @Override
     default boolean isEmpty() {
         return false;
+    }
+
+    /**
+     * @since 4.3
+     */
+    default DisplayStyle getStyle() {
+        return DisplayStyle.STATE;
     }
 }

@@ -2323,10 +2323,15 @@ public class TimeGraphControl extends TimeGraphBaseControl
 
             long maxDuration = (timeProvider.getTimeSpace() == 0) ? Long.MAX_VALUE : 1 * (time1 - time0) / timeProvider.getTimeSpace();
             Iterator<ITimeEvent> iterator = entry.getTimeEventsIterator(time0, time1, maxDuration);
-            if (entry instanceof TimeGraphLineEntry) {
+            switch (entry.getStyle()) {
+            case LINE:
                 drawLineGraphEntry(gc, time0, rect, pixelsPerNanoSec, iterator);
-            } else {
+                break;
+            case STATE:
                 drawTimeGraphEntry(gc, time0, selectedTime, rect, selected, pixelsPerNanoSec, stateRect, iterator);
+                break;
+            default:
+                break;
             }
             gc.setClipping((Rectangle) null);
         }
