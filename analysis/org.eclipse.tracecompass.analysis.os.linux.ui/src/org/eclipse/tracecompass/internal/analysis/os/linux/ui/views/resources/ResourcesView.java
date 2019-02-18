@@ -29,6 +29,7 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.tracecompass.analysis.os.linux.core.model.HostThread;
 import org.eclipse.tracecompass.analysis.os.linux.core.signals.TmfCpuSelectedSignal;
 import org.eclipse.tracecompass.analysis.os.linux.core.signals.TmfThreadSelectedSignal;
+import org.eclipse.tracecompass.internal.analysis.os.linux.core.inputoutput.DisksIODataProvider;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.resourcesstatus.ResourcesEntryModel;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.resourcesstatus.ResourcesEntryModel.Type;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.resourcesstatus.ResourcesStatusDataProvider;
@@ -37,13 +38,13 @@ import org.eclipse.tracecompass.internal.analysis.os.linux.ui.actions.FollowCpuA
 import org.eclipse.tracecompass.internal.analysis.os.linux.ui.actions.FollowThreadAction;
 import org.eclipse.tracecompass.internal.analysis.os.linux.ui.actions.UnfollowCpuAction;
 import org.eclipse.tracecompass.internal.analysis.os.linux.ui.actions.UnfollowThreadAction;
+import org.eclipse.tracecompass.internal.provisional.tmf.ui.views.timegraph.dataprovider.DataProviderBaseView;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.IFilterProperty;
 import org.eclipse.tracecompass.tmf.core.model.tree.ITmfTreeDataModel;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalHandler;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceContext;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceManager;
-import org.eclipse.tracecompass.tmf.ui.views.timegraph.BaseDataProviderTimeGraphView;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeGraphEntry;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.NamedTimeEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.TimeEvent;
@@ -51,6 +52,7 @@ import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.TimeGraphEntry;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.widgets.TimeGraphControl;
 import org.eclipse.ui.IWorkbenchActionConstants;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 
 /**
@@ -58,7 +60,7 @@ import com.google.common.collect.Multimap;
  *
  * @author Patrick Tasse
  */
-public class ResourcesView extends BaseDataProviderTimeGraphView {
+public class ResourcesView extends DataProviderBaseView {
 
     /** View ID. */
     public static final @NonNull String ID = "org.eclipse.tracecompass.analysis.os.linux.views.resources"; //$NON-NLS-1$
@@ -104,11 +106,11 @@ public class ResourcesView extends BaseDataProviderTimeGraphView {
      * Default constructor
      */
     public ResourcesView() {
-        super(ID, new ResourcesPresentationProvider(), ResourcesStatusDataProvider.ID);
+        super(ID, new ResourcesPresentationProvider(), ImmutableList.of(ResourcesStatusDataProvider.ID, DisksIODataProvider.ID));
         setFilterColumns(FILTER_COLUMN_NAMES);
         setFilterLabelProvider(new ResourcesFilterLabelProvider());
         setEntryComparator(new ResourcesEntryComparator());
-        setAutoExpandLevel(1);
+        setAutoExpandLevel(2);
     }
 
     private static class ResourcesEntryComparator implements Comparator<ITimeGraphEntry> {

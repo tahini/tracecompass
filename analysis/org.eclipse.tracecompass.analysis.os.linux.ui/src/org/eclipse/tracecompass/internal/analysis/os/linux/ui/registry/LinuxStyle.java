@@ -76,7 +76,18 @@ public enum LinuxStyle {
     /**
      * CPU is in a softirq or tasklet
      */
-    SOFT_IRQ(Messages.LinuxStyles_softrq, 200, 150, 100, 255, 1.00f);
+    SOFT_IRQ(Messages.LinuxStyles_softrq, 200, 150, 100, 255, 1.00f),
+
+    /**
+     * Reading State
+     */
+    READ("Read", 0, 0, 200, 255, 1.00f),
+
+    /**
+     * Writing state
+     */
+    WRITE("Write", 200, 0, 0, 255, 1.00f);
+
 
     private final Map<String, Object> fMap;
 

@@ -9,11 +9,14 @@
 
 package org.eclipse.tracecompass.internal.analysis.os.linux.ui.views.resources;
 
+import java.text.NumberFormat;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.StringJoiner;
 
 import org.eclipse.tracecompass.analysis.os.linux.core.kernel.StateValues;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.resourcesstatus.ResourcesEntryModel;
@@ -21,14 +24,14 @@ import org.eclipse.tracecompass.internal.analysis.os.linux.core.resourcesstatus.
 import org.eclipse.tracecompass.internal.analysis.os.linux.ui.Messages;
 import org.eclipse.tracecompass.internal.analysis.os.linux.ui.registry.LinuxStyle;
 import org.eclipse.tracecompass.internal.provisional.tmf.core.model.timegraph.ITimeGraphEntryModelWeighted;
+import org.eclipse.tracecompass.internal.provisional.tmf.ui.views.timegraph.dataprovider.DataProviderBaseView;
 import org.eclipse.tracecompass.tmf.core.model.filters.SelectionTimeQueryFilter;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.ITimeGraphDataProvider;
-import org.eclipse.tracecompass.tmf.core.model.timegraph.TimeGraphEntryModel;
 import org.eclipse.tracecompass.tmf.core.model.tree.ITmfTreeDataModel;
+import org.eclipse.tracecompass.tmf.core.model.tree.ITmfTreeDataProvider;
 import org.eclipse.tracecompass.tmf.core.presentation.RGBAColor;
 import org.eclipse.tracecompass.tmf.core.presentation.RotatingPaletteProvider;
 import org.eclipse.tracecompass.tmf.core.response.TmfModelResponse;
-import org.eclipse.tracecompass.tmf.ui.views.timegraph.BaseDataProviderTimeGraphView;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.StateItem;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.TimeGraphPresentationProvider;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEvent;
@@ -37,6 +40,8 @@ import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeGraphEntry;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.NullTimeEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.TimeEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.TimeGraphEntry;
+import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.TimeGraphLineEntry;
+import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.TimeLineEvent;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -77,6 +82,8 @@ public class ResourcesPresentationProvider extends TimeGraphPresentationProvider
         builder.put(StateValues.CPU_STATUS_IRQ, createState(LinuxStyle.INTERRUPTED));
         builder.put(StateValues.CPU_STATUS_SOFTIRQ, createState(LinuxStyle.SOFT_IRQ));
         builder.put(StateValues.CPU_STATUS_SOFT_IRQ_RAISED, createState(LinuxStyle.SOFT_IRQ_RAISED));
+        builder.put(17,createState(LinuxStyle.READ) );
+        builder.put(18,createState(LinuxStyle.WRITE) );
         STATE_MAP = builder.build();
         STATE_LIST = ImmutableList.copyOf(STATE_MAP.values());
         STATE_TABLE = STATE_LIST.toArray(new StateItem[STATE_LIST.size()]);
@@ -139,12 +146,22 @@ public class ResourcesPresentationProvider extends TimeGraphPresentationProvider
 
     @Override
     public int getStateTableIndex(ITimeEvent event) {
-        StateItem state = getEventState((TimeEvent) event);
-        if (state != null) {
-            return STATE_LIST.indexOf(state);
+        if (event instanceof TimeEvent) {
+            StateItem state = getEventState((TimeEvent) event);
+            if (state != null) {
+                return STATE_LIST.indexOf(state);
+            }
+            if (event instanceof NullTimeEvent) {
+                return INVISIBLE;
+            }
         }
-        if (event instanceof NullTimeEvent) {
-            return INVISIBLE;
+        if(event instanceof TimeLineEvent) {
+            if(event.getEntry().getName().toLowerCase().endsWith("read")) {
+                return STATE_LIST.size()-2;
+            }
+            if(event.getEntry().getName().toLowerCase().endsWith("write")) {
+                return STATE_LIST.size()-1;
+            }
         }
         return TRANSPARENT;
     }
@@ -156,14 +173,17 @@ public class ResourcesPresentationProvider extends TimeGraphPresentationProvider
 
     @Override
     public String getEventName(ITimeEvent event) {
-        StateItem state = getEventState((TimeEvent) event);
-        if (state != null) {
-            return state.getStateString();
+        if (event instanceof TimeEvent) {
+            StateItem state = getEventState((TimeEvent) event);
+            if (state != null) {
+                return state.getStateString();
+            }
+            if (event instanceof NullTimeEvent || isType(event.getEntry(), Type.CURRENT_THREAD)) {
+                return null;
+            }
+            return Messages.ResourcesView_multipleStates;
         }
-        if (event instanceof NullTimeEvent || isType(event.getEntry(), Type.CURRENT_THREAD)) {
-            return null;
-        }
-        return Messages.ResourcesView_multipleStates;
+        return null;
     }
 
     @Override
@@ -180,17 +200,26 @@ public class ResourcesPresentationProvider extends TimeGraphPresentationProvider
                 if (resourcesModel.getType().equals(Type.IRQ) || resourcesModel.getType().equals(Type.SOFT_IRQ) ||
                         resourcesModel.getType().equals(Type.CPU) || resourcesModel.getType().equals(Type.CURRENT_THREAD) ||
                         resourcesModel.getType().equals(Type.FREQUENCY)) {
-                    ITimeGraphDataProvider<? extends TimeGraphEntryModel> provider = BaseDataProviderTimeGraphView.getProvider((TimeGraphEntry) entry);
-                    if (provider != null) {
-                        return getTooltip(provider, model.getId(), hoverTime);
+                    ITmfTreeDataProvider<?> provider = DataProviderBaseView.getProvider((TimeGraphEntry) entry);
+                    if (provider instanceof ITimeGraphDataProvider) {
+                        return getTooltip((ITimeGraphDataProvider<?>) provider, model.getId(), hoverTime);
                     }
                 }
+            }
+        }
+        if (event instanceof TimeLineEvent && entry instanceof TimeGraphLineEntry) {
+            TimeLineEvent tcEvent = (TimeLineEvent) event;
+
+            if (!tcEvent.getValues().isEmpty()) {
+                StringJoiner sjw = new StringJoiner(", ");
+                tcEvent.getValues().forEach((Long value)->sjw.add(NumberFormat.getNumberInstance(Locale.getDefault()).format(value)));
+                return Collections.singletonMap("Values", sjw.toString());
             }
         }
         return Collections.emptyMap();
     }
 
-    private static Map<String, String> getTooltip(ITimeGraphDataProvider<? extends TimeGraphEntryModel> provider, long id, long hoverTime) {
+    private static Map<String, String> getTooltip(ITimeGraphDataProvider<?> provider, long id, long hoverTime) {
         SelectionTimeQueryFilter filter = new SelectionTimeQueryFilter(Collections.singletonList(hoverTime), Collections.singleton(id));
         TmfModelResponse<Map<String, String>> response = provider.fetchTooltip(filter, null);
         Map<String, String> tooltip = response.getModel();
