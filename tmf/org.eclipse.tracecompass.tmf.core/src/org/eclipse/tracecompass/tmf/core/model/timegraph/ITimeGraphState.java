@@ -10,8 +10,7 @@
 package org.eclipse.tracecompass.tmf.core.model.timegraph;
 
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.tracecompass.tmf.core.model.timegraph.IElementResolver;
-import org.eclipse.tracecompass.tmf.core.model.timegraph.IPropertyCollection;
+import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
 
 /**
  * Represents a time graph state.
@@ -48,5 +47,15 @@ public interface ITimeGraphState extends IElementResolver, IPropertyCollection {
      * @return Label
      */
     @Nullable String getLabel();
+
+    /**
+     * Get the style associated with this state
+     *
+     * @return {@link OutputElementStyle} describing the style of this state
+     * @since 5.1
+     */
+    default @Nullable OutputElementStyle getStyle() {
+        return null;
+    }
 
 }

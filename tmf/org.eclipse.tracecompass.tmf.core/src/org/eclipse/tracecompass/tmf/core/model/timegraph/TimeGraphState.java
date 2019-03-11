@@ -14,6 +14,7 @@ import java.util.Map;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.tmf.core.TmfStrings;
+import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -29,6 +30,8 @@ public class TimeGraphState implements ITimeGraphState {
     private final long fDuration;
     private final int fValue;
     private final @Nullable String fLabel;
+    private @Nullable OutputElementStyle fStyle;
+
     /**
      * A map of properties to activate or deactivate
      */
@@ -88,6 +91,22 @@ public class TimeGraphState implements ITimeGraphState {
     @Override
     public @Nullable String getLabel() {
         return fLabel;
+    }
+
+    @Override
+    public @Nullable OutputElementStyle getStyle() {
+        return fStyle;
+    }
+
+    /**
+     * Set the style for this state
+     *
+     * @param style
+     *            Style
+     * @since 5.1
+     */
+    public void setStyle(OutputElementStyle style) {
+        fStyle = style;
     }
 
     @Override

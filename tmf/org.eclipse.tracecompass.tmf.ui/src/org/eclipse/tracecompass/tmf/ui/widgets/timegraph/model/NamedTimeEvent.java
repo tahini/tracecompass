@@ -14,6 +14,7 @@ import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.IElementResolver;
+import org.eclipse.tracecompass.tmf.core.model.timegraph.ITimeGraphState;
 
 /**
  * {@link TimeEvent} with a label.
@@ -63,6 +64,22 @@ public class NamedTimeEvent extends TimeEvent {
      */
     public NamedTimeEvent(TimeGraphEntry entry, long time, long duration, int value, String label, int activeProperties) {
         super(entry, time, duration, value, activeProperties);
+        fLabel = label.intern();
+    }
+
+    /**
+     * Constructor
+     *
+     * @param stateModel
+     *            {@link ITimeGraphState} that represent this time event
+     * @param entry
+     *            The entry to which this time event is assigned
+     * @param label
+     *            This event's label
+     * @since 5.1
+     */
+    public NamedTimeEvent(ITimeGraphState stateModel, ITimeGraphEntry entry, String label) {
+        super(stateModel, entry);
         fLabel = label.intern();
     }
 

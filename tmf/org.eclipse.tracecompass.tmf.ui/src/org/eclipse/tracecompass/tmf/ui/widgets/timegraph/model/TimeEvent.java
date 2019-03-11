@@ -17,6 +17,8 @@ import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.IFilterProperty;
+import org.eclipse.tracecompass.tmf.core.model.timegraph.ITimeGraphState;
+import org.eclipse.tracecompass.tmf.core.model.timegraph.TimeGraphState;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -31,6 +33,8 @@ public class TimeEvent implements ITimeEvent {
 
     /** TimeGraphEntry matching this time event */
     protected ITimeGraphEntry fEntry;
+
+    private final ITimeGraphState fModel;
 
     /** Beginning timestamp of this time event */
     protected long fTime;
@@ -77,10 +81,7 @@ public class TimeEvent implements ITimeEvent {
      *            The status assigned to the event
      */
     public TimeEvent(ITimeGraphEntry entry, long time, long duration, int value) {
-        fEntry = entry;
-        fTime = time;
-        fDuration = duration;
-        fValue = value;
+        this(new TimeGraphState(time, duration, value), entry);
     }
 
     /**
@@ -101,11 +102,27 @@ public class TimeEvent implements ITimeEvent {
      * @since 4.0
      */
     public TimeEvent(ITimeGraphEntry entry, long time, long duration, int value, int activeProperties) {
+        this(new TimeGraphState(time, duration, value), entry);
+        // TODO ADD ACTIVE PROPERTIES
+//        fActiveProperties = activeProperties;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param stateModel
+     *            {@link ITimeGraphState} that represent this time event
+     * @param entry
+     *            The entry to which this time event is assigned
+     * @since 5.1
+     */
+    public TimeEvent(ITimeGraphState stateModel, ITimeGraphEntry entry) {
+        fModel = stateModel;
         fEntry = entry;
-        fTime = time;
-        fDuration = duration;
-        fValue = value;
-        fActiveProperties = activeProperties;
+        fTime = stateModel.getStartTime();
+        fDuration = stateModel.getDuration();
+        fValue = stateModel.getValue();
+        fActiveProperties = stateModel.getActiveProperties();
     }
 
     /**
@@ -139,6 +156,16 @@ public class TimeEvent implements ITimeEvent {
     @Override
     public long getDuration() {
         return fDuration;
+    }
+
+    /**
+     * Get the model associated with this time event
+     *
+     * @return State model
+     * @since 5.1
+     */
+    public ITimeGraphState getStateModel() {
+        return fModel;
     }
 
     @Override
