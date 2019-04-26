@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jdt.annotation.NonNull;
@@ -64,10 +65,25 @@ import com.google.common.collect.Table;
  * different data providers, which can also be of different types, ie either XY,
  * or time graph data providers.
  *
+ * This view can either be used as a base class for other views to display data
+ * provider data, or along with a secondary ID to specify which data provider to
+ * display.
+ *
  * @author Matthew Khouzam
  * @author Geneviève Bastien
  */
 public class DataProviderBaseView extends AbstractTimeGraphView {
+
+    /**
+     * Base ID of this view
+     */
+    public static final String BASE_ID = "org.eclipse.tracecompass.tmf.ui.views.base.data.provider"; //$NON-NLS-1$
+    /**
+     * Because colons are not allowed in secondary IDs, but can be present in
+     * data provider IDs, they can be replaced upstream by this string and it
+     * will be replaced again when getting the data provider ID.
+     */
+    public static final String COLON = "[COLON]"; //$NON-NLS-1$
 
     private final Map<ITmfTrace, Table<TraceEntry, DPEntry, DataProviderEntries>> fEntriesMap = new HashMap<>();
     private static final AtomicLong fIds = new AtomicLong(-100000000);
@@ -102,6 +118,15 @@ public class DataProviderBaseView extends AbstractTimeGraphView {
     }
 
     /**
+     * Default constructor. The secondary ID should contain the data provider ID
+     * to display
+     */
+    public DataProviderBaseView() {
+        super(StringUtils.EMPTY, new BasePresentationProvider());
+        fProviderIds = Collections.emptyList();
+    }
+
+    /**
      * Constructs a time graph view that contains a time graph viewer.
      *
      * By default, the view uses a single default column in the name space that
@@ -129,6 +154,12 @@ public class DataProviderBaseView extends AbstractTimeGraphView {
         // TODO: store and sort
         DataProviderManager dpm = DataProviderManager.getInstance();
         Collection<String> ids = fProviderIds;
+        if (ids.isEmpty()) {
+            String secondaryId = getViewSite().getSecondaryId();
+            if (secondaryId != null) {
+                ids = Collections.singleton(secondaryId.replace(COLON, ":"));
+            }
+        }
         TraceEntry traceEntry = getTraceEntry(trace, parentTrace, currentEntries);
         for (String id : ids) {
             ITimeGraphDataProvider<@NonNull TimeGraphEntryModel> tDataProvider = dpm.getDataProvider(trace, id, ITimeGraphDataProvider.class);
@@ -285,7 +316,6 @@ public class DataProviderBaseView extends AbstractTimeGraphView {
         }
         throw new IllegalStateException(entry + " should have a TraceEntry parent"); //$NON-NLS-1$
     }
-
 
     private static TraceEntry getTraceEntry(ITimeGraphEntry entry) {
         ITimeGraphEntry parent = entry;
@@ -465,10 +495,10 @@ public class DataProviderBaseView extends AbstractTimeGraphView {
      * @since 3.3
      */
     protected TimeEvent createTimeEvent(TimeGraphEntry entry, ITimeGraphState state) {
-        if (state.getValue() == Integer.MIN_VALUE) {
+        String label = state.getLabel();
+        if (state.getValue() == Integer.MIN_VALUE && label == null) {
             return new NullTimeEvent(entry, state.getStartTime(), state.getDuration());
         }
-        String label = state.getLabel();
         if (label != null) {
             return new NamedTimeEvent(entry, state.getStartTime(), state.getDuration(), state.getValue(), label, state.getActiveProperties());
         }

@@ -29,6 +29,14 @@
             restorable="true">
       </view>
       <view
+            category="org.eclipse.linuxtools.tmf.ui.views.category"
+            class="org.eclipse.tracecompass.internal.provisional.tmf.ui.views.timegraph.dataprovider.DataProviderBaseView"
+            icon="icons/eview16/timechart_view.gif"
+            id="org.eclipse.tracecompass.tmf.ui.views.base.data.provider"
+            name="%dataprovider.view.name"
+            restorable="true">
+      </view>
+      <view
             allowMultiple="false"
             category="org.eclipse.linuxtools.tmf.ui.views.category"
             class="org.eclipse.tracecompass.tmf.ui.views.statesystem.TmfStateSystemExplorer"
