@@ -146,6 +146,7 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
                             if (uiEntry != null) {
                                 uiEntry.updateModel(entry);
                             } else {
+                                // Do not assume that parentless entries are trace entris
                                 uiEntry = new TraceEntry(entry, trace, dataProvider);
                                 fEntries.put(dataProvider, entry.getId(), uiEntry);
                                 addToEntryList(parentTrace, Collections.singletonList(uiEntry));
@@ -205,11 +206,6 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
             super(model);
             fTrace = trace;
             fProvider = provider;
-        }
-
-        @Override
-        public boolean hasTimeEvents() {
-            return false;
         }
 
         /**
@@ -387,10 +383,10 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
      * @since 3.3
      */
     protected TimeEvent createTimeEvent(TimeGraphEntry entry, ITimeGraphState state) {
-        if (state.getValue() == Integer.MIN_VALUE) {
+        String label = state.getLabel();
+        if (state.getValue() == Integer.MIN_VALUE && label == null) {
             return new NullTimeEvent(entry, state.getStartTime(), state.getDuration());
         }
-        String label = state.getLabel();
         if (label != null) {
             return new NamedTimeEvent(entry, state.getStartTime(), state.getDuration(), state.getValue(), label, state.getActiveProperties());
         }
