@@ -25,6 +25,9 @@ Export-Package: org.eclipse.tracecompass.internal.lttng2.kernel.core;x-friends:=
  org.eclipse.tracecompass.internal.lttng2.kernel.core.analysis.graph.handlers;x-friends:="org.eclipse.tracecompass.lttng2.kernel.ui,org.eclipse.tracecompass.lttng2.kernel.core.tests",
  org.eclipse.tracecompass.internal.lttng2.kernel.core.analysis.graph.model;x-friends:="org.eclipse.tracecompass.lttng2.kernel.ui,org.eclipse.tracecompass.lttng2.kernel.core.tests",
  org.eclipse.tracecompass.internal.lttng2.kernel.core.event.matching;x-friends:="org.eclipse.tracecompass.lttng2.kernel.core.tests",
+ org.eclipse.tracecompass.internal.lttng2.kernel.core.kallsyms;x-friends:="org.eclipse.tracecompass.lttng2.kernel.core.tests",
+ org.eclipse.tracecompass.internal.lttng2.kernel.core.symbol;x-friends:="org.eclipse.tracecompass.lttng2.kernel.core.tests",
+ org.eclipse.tracecompass.internal.lttng2.kernel.core.trace;x-internal:=true,
  org.eclipse.tracecompass.internal.lttng2.kernel.core.trace.layout;x-friends:="org.eclipse.tracecompass.lttng2.kernel.core.tests,org.eclipse.tracecompass.lttng2.kernel.ui",
  org.eclipse.tracecompass.lttng2.kernel.core.trace
 Import-Package: com.google.common.cache,

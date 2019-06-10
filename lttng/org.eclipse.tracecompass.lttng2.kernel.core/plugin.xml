@@ -13,6 +13,7 @@
       </type>
    </extension>
    <extension
+         id="org.eclipse.tracecompass.lttng2.kernel.core.kallsyms"
          point="org.eclipse.linuxtools.tmf.core.analysis">
       <module
             analysis_module="org.eclipse.tracecompass.analysis.counters.core.CounterAnalysis"
@@ -22,6 +23,15 @@
             name="Counters">
             <tracetype
                class="org.eclipse.tracecompass.lttng2.kernel.core.trace.LttngKernelTrace">
+            </tracetype>
+      </module>
+      <module
+            analysis_module="org.eclipse.tracecompass.internal.lttng2.kernel.core.kallsyms.KallsymsAnalysisModule"
+            id="org.eclipse.tracecompass.lttng2.kernel.core.kallsyms"
+            name="Kernel All Symbols">
+            <tracetype
+                  applies="true"
+                  class="org.eclipse.tracecompass.lttng2.kernel.core.trace.LttngKernelTrace">
             </tracetype>
       </module>
    </extension>
@@ -48,5 +58,13 @@
       <handler
          class="org.eclipse.tracecompass.internal.lttng2.kernel.core.analysis.graph.building.LttngGraphHandlerBuilder$HandlerBuilderExecutionGraph"
          priority="10" />
+   </extension>
+   <extension
+         point="org.eclipse.tracecompass.tmf.core.symbolProvider">
+      <providerFactory
+            class="org.eclipse.tracecompass.internal.lttng2.kernel.core.symbol.LttngKernelSymbolProviderFactory"
+            id="org.eclipse.tracecompass.lttng2.kernel.core.kallsyms"
+            priority="50">
+      </providerFactory>
    </extension>
 </plugin>

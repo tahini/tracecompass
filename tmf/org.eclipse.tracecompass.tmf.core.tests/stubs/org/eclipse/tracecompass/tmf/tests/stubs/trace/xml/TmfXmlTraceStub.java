@@ -314,8 +314,13 @@ public abstract class TmfXmlTraceStub extends TmfTrace {
                     try {
                         val = Long.valueOf(value);
                     } catch (NumberFormatException e) {
-                        Activator.logError(String.format("Get next XML event: cannot cast value %s to long", value), e); //$NON-NLS-1$
-                        val = 0L;
+                        // Let's try an unsigned hexadecimal long value
+                        try {
+                            val = Long.parseUnsignedLong(value, 16);
+                        } catch (NumberFormatException e2) {
+                            Activator.logError(String.format("Get next XML event: cannot cast value %s to long", value), e2); //$NON-NLS-1$
+                            val = 0L;
+                        }
                     }
                     break;
                 }
