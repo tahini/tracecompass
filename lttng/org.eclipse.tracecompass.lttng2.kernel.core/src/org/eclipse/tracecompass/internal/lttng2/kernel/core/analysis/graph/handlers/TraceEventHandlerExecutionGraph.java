@@ -9,12 +9,15 @@
 
 package org.eclipse.tracecompass.internal.lttng2.kernel.core.analysis.graph.handlers;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfEdge;
 import org.eclipse.tracecompass.analysis.graph.core.base.TmfEdge.EdgeType;
@@ -39,6 +42,9 @@ import org.eclipse.tracecompass.tmf.core.event.matching.IMatchProcessingUnit;
 import org.eclipse.tracecompass.tmf.core.event.matching.TmfEventDependency;
 import org.eclipse.tracecompass.tmf.core.event.matching.TmfEventDependency.DependencyEvent;
 import org.eclipse.tracecompass.tmf.core.event.matching.TmfEventMatching;
+import org.eclipse.tracecompass.tmf.core.symbols.ISymbolProvider;
+import org.eclipse.tracecompass.tmf.core.symbols.SymbolProviderManager;
+import org.eclipse.tracecompass.tmf.core.symbols.SymbolProviderUtils;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceUtils;
 
@@ -66,6 +72,8 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
     private final IMatchProcessingUnit fMatchProcessing;
     private Map<DependencyEvent, TmfVertex> fTcpNodes;
     private TmfEventMatching fTcpMatching;
+
+    private List<ISymbolProvider> fProviders;
 
     /**
      * Constructor
@@ -115,6 +123,15 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         ITmfTrace trace = provider.getTrace();
         fTcpMatching = new TmfEventMatching(Collections.singleton(trace), fMatchProcessing);
         fTcpMatching.initMatching();
+
+        // Get the symbol providers to resolve timer symbols
+        Collection<@NonNull ISymbolProvider> symbolProviders = SymbolProviderManager.getInstance().getSymbolProviders(provider.getTrace());
+        List<ISymbolProvider> providers = new ArrayList<>();
+        for (ISymbolProvider symbolProvider : symbolProviders) {
+            providers.add(symbolProvider);
+            symbolProvider.loadConfiguration(null);
+        }
+        fProviders = providers;
     }
 
     private OsWorker getOrCreateKernelWorker(ITmfEvent event, Integer cpu) {
@@ -266,8 +283,14 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         OsInterruptContext context = system.peekContextStack(host, cpu);
         switch (context.getContext()) {
         case HRTIMER:
-            // shortcut of appendTaskNode: resolve blocking source in situ
-            graph.append(target, new TmfVertex(ts), EdgeType.TIMER);
+            // Get the reason of the time by resolving the timer function
+            ITmfEvent timerEvent = context.getEvent();
+            Long address = timerEvent.getContent().getFieldValue(Long.class, "hrtimer"); //$NON-NLS-1$
+            String function = null;
+            if (address != null) {
+                function = SymbolProviderUtils.getSymbolText(fProviders, -1, timerEvent.getTimestamp().toNanos(), address);
+            }
+            graph.append(target, new TmfVertex(ts), EdgeType.TIMER, function);
             break;
         case IRQ:
         case COMPLETE_IRQ:
