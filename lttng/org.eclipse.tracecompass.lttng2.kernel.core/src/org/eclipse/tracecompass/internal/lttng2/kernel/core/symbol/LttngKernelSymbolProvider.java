@@ -69,7 +69,6 @@ public class LttngKernelSymbolProvider implements ISymbolProvider {
     public LttngKernelSymbolProvider(KallsymsAnalysisModule module, ITmfTrace trace) {
         fTrace = trace;
         module.schedule();
-        module.waitForInitialization();
         fModule = module;
         fSymbolMapping = new TreeMap<>(MAP_COMPARATOR);
     }
@@ -82,24 +81,28 @@ public class LttngKernelSymbolProvider implements ISymbolProvider {
     @Override
     public void loadConfiguration(@Nullable IProgressMonitor monitor) {
 
-
+        // If the analysis is ready to be filled, do it now, no need for a job
         ITmfStateSystem stateSystem = fModule.getStateSystem();
-        if (stateSystem == null) {
-            return;
-        }
-        boolean done = stateSystem.waitUntilBuilt(0L);
+        if (stateSystem != null) {
+            boolean done = stateSystem.waitUntilBuilt(0L);
 
-        // Load the symbols done so far
-        loadCurrentSymbols(stateSystem);
-        // If the state system is finished building, just return
-        if (done) {
-            return;
+            // Load the symbols done so far
+            loadCurrentSymbols(stateSystem);
+            // If the state system is finished building, just return
+            if (done) {
+                return;
+            }
         }
 
         // Let's load the symbols as the analysis is built
-        Job job = new Job("loading kernel symbols") {
+        Job job = new Job("Loading kernel symbols") { //$NON-NLS-1$
             @Override
             protected @Nullable IStatus run(final @Nullable IProgressMonitor monitor2) {
+                fModule.waitForInitialization();
+                ITmfStateSystem ss = fModule.getStateSystem();
+                if (ss == null) {
+                    return Status.OK_STATUS;
+                }
                 try (ScopeLog jobLog = new ScopeLog(LOGGER, Level.FINE, "LttngKernelSymbolProvider:loading")) { //$NON-NLS-1$
                     IProgressMonitor mon = monitor;
                     if (mon == null) {
@@ -108,11 +111,11 @@ public class LttngKernelSymbolProvider implements ISymbolProvider {
 
                     boolean finished = false;
                     do {
-                        finished = stateSystem.waitUntilBuilt(100L);
+                        finished = ss.waitUntilBuilt(100L);
                         if (mon.isCanceled() || (monitor2 != null && monitor2.isCanceled())) {
                             return Status.CANCEL_STATUS;
                         }
-                        loadCurrentSymbols(stateSystem);
+                        loadCurrentSymbols(ss);
                     } while (!finished);
 
                     return Status.OK_STATUS;
@@ -133,6 +136,10 @@ public class LttngKernelSymbolProvider implements ISymbolProvider {
                 for (Integer moduleQuark : stateSystem.getSubAttributes(hostQuark, false)) {
                     String moduleName = stateSystem.getAttributeName(moduleQuark);
                     for (Integer symbolQuark : stateSystem.getSubAttributes(moduleQuark, false)) {
+                        if (symbolQuark >= states.size() ) {
+                            // The quark was not available when we got the state, we'll pick it up next iteration
+                            continue;
+                        }
                         String addrString = stateSystem.getAttributeName(symbolQuark);
                         long address = Long.parseUnsignedLong(addrString, 16);
                         ITmfStateInterval interval = states.get(symbolQuark);

@@ -42,6 +42,7 @@ public class OsExecutionGraph extends TmfGraphBuilderModule {
         if (trace == null) {
             throw new NullPointerException();
         }
+        // Load the symbol providers here, we'll need them when making the analysis
         return new OsExecutionGraphProvider(trace);
     }
 

@@ -37,8 +37,14 @@ public class KallsymsStateProvider extends AbstractTmfStateProvider {
 
     private static final String ID = "org.eclipse.tracecompass.lttng2.kernel.kallsyms.provider"; //$NON-NLS-1$
     private static final int VERSION = 1;
+    private static final String ADDR_FIELD = "addr"; //$NON-NLS-1$
+    private static final String MODULE_FIELD = "module"; //$NON-NLS-1$
+    private static final String FUNCTION_FIELD = "symbol"; //$NON-NLS-1$
+    private static final String KERNEL = "[KERNEL]"; //$NON-NLS-1$
 
     private static final String STATEDUMP_KALLSYMS_EVENT = "lttng_kallsyms_kernel_symbol"; //$NON-NLS-1$
+    private static final String KALLSYMS_NEW_SYMBOL_EVENT = "lttng_kallsyms_new_module_symbol"; //$NON-NLS-1$
+    private static final String KALLSYMS_MODULE_UNLOAD = "lttng_kallsyms_module_unloaded"; //$NON-NLS-1$
 
     /**
      * Constructor
@@ -63,26 +69,59 @@ public class KallsymsStateProvider extends AbstractTmfStateProvider {
     @Override
     protected void eventHandle(@NonNull ITmfEvent event) {
         String name = event.getName();
-        if (!name.equals(STATEDUMP_KALLSYMS_EVENT)) {
-            return;
+
+        switch(name) {
+        case STATEDUMP_KALLSYMS_EVENT:
+            addNewSymbol(event, false);
+            break;
+        case KALLSYMS_NEW_SYMBOL_EVENT:
+            addNewSymbol(event, true);
+            break;
+        case KALLSYMS_MODULE_UNLOAD:
+            handleModuleUnload(event);
+            break;
+        default:
+            break;
         }
+    }
+
+    private void handleModuleUnload(ITmfEvent event) {
         ITmfStateSystemBuilder ssb = this.getStateSystemBuilder();
         if (ssb == null) {
-            throw new NullPointerException("State system should not be null at this point");
+            throw new NullPointerException("State system should not be null at this point"); //$NON-NLS-1$
+        }
+        String module = event.getContent().getFieldValue(String.class, MODULE_FIELD);
+        if (module == null) {
+            return;
+        }
+        int moduleQuark = ssb.getQuarkAbsoluteAndAdd(event.getTrace().getHostId(), module);
+        long time = event.getTimestamp().toNanos();
+        for (int symbolQuark : ssb.getSubAttributes(moduleQuark, false)) {
+            ssb.removeAttribute(time, symbolQuark);
+        }
+    }
+
+    private void addNewSymbol(ITmfEvent event, boolean isNewSymbol) {
+        ITmfStateSystemBuilder ssb = this.getStateSystemBuilder();
+        if (ssb == null) {
+            throw new NullPointerException("State system should not be null at this point"); //$NON-NLS-1$
         }
 
-        Long address = event.getContent().getFieldValue(Long.class, "addr");
-        String symbol = event.getContent().getFieldValue(String.class, "symbol");
+        Long address = event.getContent().getFieldValue(Long.class, ADDR_FIELD);
+        String symbol = event.getContent().getFieldValue(String.class, FUNCTION_FIELD);
         if (address == null || symbol == null) {
             // Data not available
             return;
         }
-        String module = event.getContent().getFieldValue(String.class, "module");
-        module = (module == null || module.isEmpty()) ? "[KERNEL]" : module;
+        String module = event.getContent().getFieldValue(String.class, MODULE_FIELD);
+        module = (module == null || module.isEmpty()) ? KERNEL : module;
 
-        int moduleQuark = ssb.getQuarkAbsoluteAndAdd(event.getTrace().getHostId(), module, Long.toUnsignedString(address, 16));
-        ssb.updateOngoingState(symbol, moduleQuark);
-
+        int symbolQuark = ssb.getQuarkAbsoluteAndAdd(event.getTrace().getHostId(), module, Long.toUnsignedString(address, 16));
+        if (isNewSymbol) {
+            ssb.modifyAttribute(event.getTimestamp().toNanos(), symbol, symbolQuark);
+        } else {
+            ssb.updateOngoingState(symbol, symbolQuark);
+        }
     }
 
 }
