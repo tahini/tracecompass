@@ -307,6 +307,54 @@ public interface IKernelAnalysisEventLayout {
     String eventHRTimerExpireExit();
 
     /**
+     * Starting a timer
+     *
+     * @return the event name
+     *
+     * @since 4.0
+     */
+    default String eventTimerStart() {
+        // Some layouts may have implemented it using the hrtimer
+        return eventHRTimerStart();
+    }
+
+    /**
+     * Canceling a timer
+     *
+     * @return the event name
+     *
+     * @since 4.0
+     */
+    default String eventTimerCancel() {
+        // Some layouts may have implemented it using the hrtimer
+        return eventHRTimerCancel();
+    }
+
+    /**
+     * Entering a timer expired handler.
+     *
+     * @return the event name
+     *
+     * @since 4.0
+     */
+    default String eventTimerExpireEntry() {
+        // Some layouts may have implemented it using the hrtimer
+        return eventHRTimerExpireEntry();
+    }
+
+    /**
+     * Exiting a timer expired handler.
+     *
+     * @return the event name
+     *
+     * @since 4.0
+     */
+    default String eventTimerExpireExit() {
+        // Some layouts may have implemented it using the hrtimer
+        return eventHRTimerExpireExit();
+    }
+
+    /**
      * The kernel just allocated a page of memory.
      * <p>
      * In Linux, this typically means a user space application just got a page
@@ -622,6 +670,48 @@ public interface IKernelAnalysisEventLayout {
      * @since 2.0
      */
     String fieldHRtimerNow();
+
+    /**
+     * The field with the timer. The timer holds the timer instance.
+     *
+     * @return the name of the hrTimer field
+     * @since 4.0
+     */
+    default String fieldTimer() {
+        return "timer"; //$NON-NLS-1$
+    }
+
+    /**
+     * The field with the expires value. The expires field holds the expiry
+     * time of the timer.
+     *
+     * @return the name of the expires field
+     * @since 4.0
+     */
+    default String fieldTimerExpires() {
+        return "expires"; //$NON-NLS-1$
+    }
+
+    /**
+     * The field of the function address value. The function field holds timer
+     * expiry callback function.
+     *
+     * @return the name of the function field
+     * @since 4.0
+     */
+    default String fieldTimerFunction() {
+        return "function"; //$NON-NLS-1$
+    }
+
+    /**
+     * The field of the now value. The now field holds the current time.
+     *
+     * @return the name of the now field (timer)
+     * @since 4.0
+     */
+    default String fieldTimerNow() {
+        return "now"; //$NON-NLS-1$
+    }
 
     /**
      * The field containing the return value of a system call exit.

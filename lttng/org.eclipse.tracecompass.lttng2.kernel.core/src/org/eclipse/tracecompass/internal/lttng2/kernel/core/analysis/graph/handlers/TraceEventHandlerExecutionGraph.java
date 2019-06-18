@@ -285,12 +285,12 @@ public class TraceEventHandlerExecutionGraph extends BaseHandler {
         case HRTIMER:
             // Get the reason of the time by resolving the timer function
             ITmfEvent timerEvent = context.getEvent();
-            Long address = timerEvent.getContent().getFieldValue(Long.class, "hrtimer"); //$NON-NLS-1$
+            Long address = timerEvent.getContent().getFieldValue(Long.class, "function"); //$NON-NLS-1$
             String function = null;
             if (address != null) {
                 function = SymbolProviderUtils.getSymbolText(fProviders, -1, timerEvent.getTimestamp().toNanos(), address);
             }
-            graph.append(target, new TmfVertex(ts), EdgeType.TIMER, function);
+            graph.append(target, new TmfVertex(ts), EdgeType.TIMER, String.valueOf(function));
             break;
         case IRQ:
         case COMPLETE_IRQ:

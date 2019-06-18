@@ -63,6 +63,10 @@ public class DefaultEventLayout implements IKernelAnalysisEventLayout {
     private static final String HRTIMER_EXPIRE_EXIT = "hrtimer_expire_exit"; //$NON-NLS-1$
     private static final String SCHED_SWITCH = "sched_switch"; //$NON-NLS-1$
     private static final String SCHED_PI_SETPRIO = "sched_pi_setprio"; //$NON-NLS-1$
+    private static final String TIMER_START = "timer_start"; //$NON-NLS-1$
+    private static final String TIMER_CANCEL = "timer_cancel"; //$NON-NLS-1$
+    private static final String TIMER_EXPIRE_ENTRY = "timer_expire_entry"; //$NON-NLS-1$
+    private static final String TIMER_EXPIRE_EXIT = "timer_expire_exit"; //$NON-NLS-1$
 
     private static final String SCHED_TTWU = "sched_ttwu"; //$NON-NLS-1$
     private static final String SCHED_WAKING = "sched_waking"; //$NON-NLS-1$
@@ -379,6 +383,26 @@ public class DefaultEventLayout implements IKernelAnalysisEventLayout {
     @Override
     public String eventHRTimerExpireExit() {
         return HRTIMER_EXPIRE_EXIT;
+    }
+
+    @Override
+    public @NonNull String eventTimerStart() {
+        return TIMER_START;
+    }
+
+    @Override
+    public @NonNull String eventTimerCancel() {
+        return TIMER_CANCEL;
+    }
+
+    @Override
+    public @NonNull String eventTimerExpireEntry() {
+        return TIMER_EXPIRE_ENTRY;
+    }
+
+    @Override
+    public @NonNull String eventTimerExpireExit() {
+        return TIMER_EXPIRE_EXIT;
     }
 
     /**

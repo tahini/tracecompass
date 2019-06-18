@@ -45,6 +45,10 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
     private static final String HRTIMER_EXPIRE_EXIT = "hrtimer_expire_exit";
     private static final String SCHED_SWITCH = "sched_switch";
     private static final String SCHED_PI_SETPRIO = "sched_pi_setprio";
+    private static final String TIMER_START = "timer_start";
+    private static final String TIMER_CANCEL = "timer_cancel";
+    private static final String TIMER_EXPIRE_ENTRY = "timer_expire_entry";
+    private static final String TIMER_EXPIRE_EXIT = "timer_expire_exit";
 
     private static final String SCHED_TTWU = "sched_ttwu";
     private static final String SCHED_WAKEUP = "sched_wakeup";
@@ -96,6 +100,10 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
     private static final String HRTIMER_EXPIRES = "expires";
     private static final String HRTIMER_NOW = "now";
     private static final String HRTIMER_SOFT_EXPIRES = "softexpires";
+    private static final String TIMER = "hrtimer";
+    private static final String TIMER_FUNCTION = "function";
+    private static final String TIMER_EXPIRES = "expires";
+    private static final String TIMER_NOW = "now";
     private static final String KMEM_ALLOC = "mm_page_alloc";
     private static final String KMEM_FREE = "mm_page_free";
     private static final String SYSCALL_RET = "ret";
@@ -380,6 +388,26 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
         return HRTIMER_EXPIRE_EXIT;
     }
 
+    @Override
+    public @NonNull String eventTimerStart() {
+        return TIMER_START;
+    }
+
+    @Override
+    public @NonNull String eventTimerCancel() {
+        return TIMER_CANCEL;
+    }
+
+    @Override
+    public @NonNull String eventTimerExpireEntry() {
+        return TIMER_EXPIRE_ENTRY;
+    }
+
+    @Override
+    public @NonNull String eventTimerExpireExit() {
+        return TIMER_EXPIRE_EXIT;
+    }
+
     /**
      * Event indicating the source of the wakeup signal.
      *
@@ -394,6 +422,7 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
     public String fieldHRtimer() {
         return HRTIMER;
     }
+
     @Override
     public String fieldHRtimerFunction() {
         return HRTIMER_FUNCTION;
@@ -408,9 +437,30 @@ public class LttngEventLayout implements IKernelAnalysisEventLayout {
     public String fieldHRtimerSoftexpires() {
         return HRTIMER_SOFT_EXPIRES;
     }
+
     @Override
     public String fieldHRtimerNow() {
         return HRTIMER_NOW;
+    }
+
+    @Override
+    public String fieldTimer() {
+        return TIMER;
+    }
+
+    @Override
+    public String fieldTimerFunction() {
+        return TIMER_FUNCTION;
+    }
+
+    @Override
+    public String fieldTimerExpires() {
+        return TIMER_EXPIRES;
+    }
+
+    @Override
+    public String fieldTimerNow() {
+        return TIMER_NOW;
     }
 
     @Override

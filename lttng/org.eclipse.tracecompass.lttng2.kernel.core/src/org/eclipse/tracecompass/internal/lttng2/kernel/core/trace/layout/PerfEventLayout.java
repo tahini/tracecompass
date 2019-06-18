@@ -169,6 +169,26 @@ public final class PerfEventLayout implements IKernelAnalysisEventLayout {
     }
 
     @Override
+    public @NonNull String eventTimerStart() {
+        return "timer:timer_start"; //$NON-NLS-1$
+    }
+
+    @Override
+    public @NonNull String eventTimerCancel() {
+        return "timer:timer_cancel"; //$NON-NLS-1$
+    }
+
+    @Override
+    public @NonNull String eventTimerExpireEntry() {
+        return "timer:timer_expire_entry"; //$NON-NLS-1$
+    }
+
+    @Override
+    public @NonNull String eventTimerExpireExit() {
+        return "timer:timer_expire_exit"; //$NON-NLS-1$
+    }
+
+    @Override
     public String eventKmemPageAlloc() {
         return "kmem:page_alloc"; //$NON-NLS-1$
     }

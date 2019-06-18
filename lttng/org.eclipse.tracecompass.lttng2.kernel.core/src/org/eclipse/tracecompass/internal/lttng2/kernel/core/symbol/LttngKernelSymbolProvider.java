@@ -159,12 +159,25 @@ public class LttngKernelSymbolProvider implements ISymbolProvider {
         if (floorEntry == null) {
             return null;
         }
-        // See if the symbol returned is the last symbol. In this case, don't
-        // use the floor unless it hits the exact address
-        TmfResolvedSymbol symbol = Objects.requireNonNull(floorEntry.getValue());
-        long floorValue = symbol.getBaseAddress();
-        return ((floorValue == fSymbolMapping.lastKey())
-                && floorValue != address) ? null : symbol;
+        Entry<Long, TmfResolvedSymbol> ceilingEntry = fSymbolMapping.ceilingEntry(address);
+        if (floorEntry == ceilingEntry) {
+            // Floor and ceiling are the same, then it's an exact match
+            return floorEntry.getValue();
+        }
+        if (ceilingEntry == null) {
+            // The entry is the last symbol and there is no match, return null
+            // as we don't know where the last symbol ends
+            return null;
+        }
+        if (Objects.requireNonNull(ceilingEntry.getKey()) - Objects.requireNonNull(floorEntry.getKey()) > 100000) {
+            // The gap between the resolved symbol and the next entry is too
+            // big. There is probably other sources of symbols in those
+            // addresses, so we ignore this symbol. In the Linux kernel there
+            // are symbols with very low addresses, and others with very large,
+            // applications are in between.
+            return null;
+        }
+        return floorEntry.getValue();
     }
 
     @Override
