@@ -12,9 +12,12 @@ package org.eclipse.tracecompass.tmf.ui.views.timegraph;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.SubMonitor;
@@ -78,6 +81,8 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
 
     private final String fProviderId;
 
+    private final Map<String, TimeGraphEntry> fAggregateGroup = new HashMap<>();
+
     /**
      * Constructs a time graph view that contains a time graph viewer.
      *
@@ -139,6 +144,14 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
                     List<TimeGraphEntry> orphaned = new ArrayList<>();
                     for (TimeGraphEntryModel entry : model.getEntries()) {
                         TimeGraphEntry uiEntry = fEntries.get(dataProvider, entry.getId());
+                        Map<@NonNull String, @NonNull Object> entryData = entry.getData();
+                        String entryGroup = null;
+                        if (entryData != null) {
+                            Object group = entryData.get("group");
+                            if (group instanceof String) {
+                                entryGroup = (String) group;
+                            }
+                        }
                         if (entry.getParentId() != -1) {
                             if (uiEntry == null) {
                                 uiEntry = new TimeGraphEntry(entry);
@@ -161,7 +174,19 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
                             } else {
                                 // Do not assume that parentless entries are
                                 // trace entries
-                                uiEntry = new TraceEntry(entry, trace, dataProvider);
+                                if (entryGroup != null) {
+                                    TimeGraphEntry aggregateEntry = fAggregateGroup.get(entryGroup);
+                                    if (aggregateEntry instanceof AggregateTraceEntry) {
+                                        ((AggregateTraceEntry) aggregateEntry).addTraceEntry(entry, trace, dataProvider);
+                                        uiEntry = aggregateEntry;
+                                        // continue;
+                                    } else {
+                                        uiEntry = new AggregateTraceEntry(entry, trace, dataProvider, entryGroup);
+                                        fAggregateGroup.put(entryGroup, uiEntry);
+                                    }
+                                } else {
+                                    uiEntry = new TraceEntry(entry, trace, dataProvider);
+                                }
                                 fEntries.put(dataProvider, entry.getId(), uiEntry);
                                 addToEntryList(parentTrace, Collections.singletonList(uiEntry));
                             }
@@ -204,6 +229,121 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
                 }
             }
         }
+    }
+
+    /**
+     * @since 5.1
+     */
+    protected static class AggregateTraceEntry extends TraceEntry {
+        private final @NonNull Map<@NonNull Long, @NonNull ITmfTrace> fTraces = new HashMap<>();
+        private final @NonNull Map<@NonNull Long, @NonNull ITimeGraphDataProvider<? extends TimeGraphEntryModel>> fProviders = new HashMap<>();
+        private final @NonNull Set<@NonNull TimeGraphEntryModel> fModels = new HashSet<>();
+        private final @NonNull String fAggregateName;
+
+        /**
+         * Constructor
+         *
+         * @param model
+         *            trace level model
+         * @param trace
+         *            The trace corresponding to this trace entry.
+         * @param provider
+         *            reference to the provider for this trace and view
+         * @param name
+         *            The visible name for this {@link AggregateTraceEntry}
+         */
+        public AggregateTraceEntry(@NonNull TimeGraphEntryModel model, @NonNull ITmfTrace trace,
+                @NonNull ITimeGraphDataProvider<? extends TimeGraphEntryModel> provider, @NonNull String name) {
+            super(model, trace, provider);
+            fModels.add(model);
+            fTraces.put(model.getId(), trace);
+            fProviders.put(model.getId(), provider);
+            fAggregateName = name;
+        }
+
+        @Override
+        public String getName() {
+            return fAggregateName;
+        }
+
+        @Override
+        public long getStartTime() {
+            long startTime = Long.MAX_VALUE;
+            for (TimeGraphEntryModel model : fModels) {
+                startTime = Math.min(startTime, model.getStartTime());
+            }
+            return startTime;
+        }
+
+        @Override
+        public long getEndTime() {
+            long endTime = Long.MIN_VALUE;
+            for (TimeGraphEntryModel model : fModels) {
+                endTime = Math.max(endTime, model.getEndTime());
+            }
+            return endTime;
+        }
+
+        /**
+         * Add a trace entry to this {@link AggregateTraceEntry}
+         *
+         * @param model
+         *            Trace entry model
+         * @param trace
+         *            Trace associated to this {@link AggregateTraceEntry}
+         * @param provider
+         *            {@link ITimeGraphDataProvider} associated to this
+         *            {@link AggregateTraceEntry}
+         */
+        public void addTraceEntry(@NonNull TimeGraphEntryModel model, @NonNull ITmfTrace trace,
+                @NonNull ITimeGraphDataProvider<? extends TimeGraphEntryModel> provider) {
+            fTraces.put(model.getId(), trace);
+            fProviders.put(model.getId(), provider);
+            fModels.add(model);
+        }
+
+        /**
+         * Get for this trace entry's trace
+         *
+         * @param id
+         *            Parent entry ID
+         *
+         * @return the trace for this trace entry and its children
+         */
+        public @NonNull ITmfTrace getTrace(long id) {
+            ITmfTrace trace = fTraces.get(id);
+            if (trace != null) {
+                return trace;
+            }
+            throw new IllegalStateException(this + " should have a trace associated to this id: " + id); //$NON-NLS-1$
+        }
+
+        /**
+         * Get the data provider for this {@link AggregateTraceEntry}
+         *
+         * @param id
+         *            Parent entry ID
+         *
+         * @return this entry's {@link ITimeGraphDataProvider}
+         */
+        public @NonNull ITimeGraphDataProvider<? extends TimeGraphEntryModel> getProvider(long id) {
+            ITimeGraphDataProvider<? extends TimeGraphEntryModel> provider = fProviders.get(id);
+            if(provider != null) {
+                return provider;
+            }
+            throw new IllegalStateException(this + " should have a provider associated to this id: " + id); //$NON-NLS-1$
+        }
+
+        /**
+         * Get all the data providers associated to this
+         * {@link AggregateTraceEntry}
+         *
+         * @return Collection of {@link ITimeGraphDataProvider}
+         */
+        public @NonNull Collection<@NonNull ITimeGraphDataProvider<? extends TimeGraphEntryModel>> getProviders() {
+            return fProviders.values();
+        }
+
     }
 
     /**
@@ -263,7 +403,11 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
      * @since 3.3
      */
     public static @NonNull ITmfTrace getTrace(TimeGraphEntry entry) {
-        return getTraceEntry(entry).getTrace();
+        TraceEntry traceEntry = getTraceEntry(entry);
+        if (traceEntry instanceof AggregateTraceEntry) {
+            return ((AggregateTraceEntry) traceEntry).getTrace(getTraceEntryId(entry));
+        }
+        return traceEntry.getTrace();
     }
 
     /**
@@ -276,7 +420,24 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
      * @since 3.3
      */
     public static ITimeGraphDataProvider<? extends TimeGraphEntryModel> getProvider(TimeGraphEntry entry) {
-        return getTraceEntry(entry).getProvider();
+        TraceEntry traceEntry = getTraceEntry(entry);
+        if (traceEntry instanceof AggregateTraceEntry) {
+            return ((AggregateTraceEntry) traceEntry).getProvider(getTraceEntryId(entry));
+        }
+        return traceEntry.getProvider();
+    }
+
+    private static long getTraceEntryId(TimeGraphEntry entry) {
+        long id = entry.getEntryModel().getId();
+        TimeGraphEntry parent = entry;
+        while (parent != null) {
+            if (parent instanceof TraceEntry) {
+                return id;
+            }
+            id = parent.getEntryModel().getParentId();
+            parent = parent.getParent();
+        }
+        throw new IllegalStateException(entry + " should have a TraceEntry parent ID"); //$NON-NLS-1$
     }
 
     private static TraceEntry getTraceEntry(TimeGraphEntry entry) {
@@ -423,9 +584,11 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
             return new NullTimeEvent(entry, state.getStartTime(), state.getDuration());
         }
         if (label != null) {
-            return new NamedTimeEvent(entry, state.getStartTime(), state.getDuration(), state.getValue(), label, state.getActiveProperties());
+            return new NamedTimeEvent(state, entry, label);
+//            return new NamedTimeEvent(entry, state.getStartTime(), state.getDuration(), state.getValue(), label, state.getActiveProperties());
         }
-        return new TimeEvent(entry, state.getStartTime(), state.getDuration(), state.getValue(), state.getActiveProperties());
+        return new TimeEvent(state, entry);
+//        return new TimeEvent(entry, state.getStartTime(), state.getDuration(), state.getValue(), state.getActiveProperties());
     }
 
     @Override
@@ -469,11 +632,17 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
         if (entryList != null) {
             synchronized (fEntries) {
                 for (TimeGraphEntry entry : entryList) {
-                    if (entry instanceof TraceEntry) {
+                    if (entry instanceof AggregateTraceEntry) {
+                        Collection<@NonNull ITimeGraphDataProvider<? extends TimeGraphEntryModel>> providers = ((AggregateTraceEntry) entry).getProviders();
+                        for (ITimeGraphDataProvider<? extends TimeGraphEntryModel> provider : providers) {
+                            fEntries.row(provider).clear();
+                        }
+                    } else if (entry instanceof TraceEntry) {
                         fEntries.row(((TraceEntry) entry).getProvider()).clear();
                     }
                 }
             }
+            fAggregateGroup.clear();
         }
     }
 

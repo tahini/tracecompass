@@ -22,6 +22,7 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.tracecompass.internal.tmf.ui.Messages;
+import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeGraphEntry;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.widgets.ITmfTimeGraphDrawingHelper;
@@ -39,6 +40,8 @@ public class TimeGraphPresentationProvider implements ITimeGraphPresentationProv
 
     private ITmfTimeGraphDrawingHelper fDrawingHelper;
     private final String fStateTypeName;
+
+    private ITmfTrace fTrace;
 
     // The list of listeners for graph color changes
     private final List<ITimeGraphColorListener> fListeners = new ArrayList<>();
@@ -160,6 +163,23 @@ public class TimeGraphPresentationProvider implements ITimeGraphPresentationProv
      */
     protected void fireColorSettingsChanged(){
         refresh();
+    }
+
+    /**
+     * @param trace
+     *            Trace to set for this presentation provider
+     * @since 5.1
+     */
+    public void setTrace(ITmfTrace trace) {
+        fTrace = trace;
+    }
+
+    /**
+     * @return The associated trace
+     * @since 5.1
+     */
+    public ITmfTrace getTrace() {
+        return fTrace;
     }
 
     /**

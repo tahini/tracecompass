@@ -57,4 +57,18 @@ public final class RGBAUtil {
     public static RGBA fromRGBAColor(RGBAColor color) {
         return fromInt(color.toInt());
     }
+
+    /**
+     * Get {@link RGB} from HEX string
+     *
+     * @param color
+     *            Color in HEX representation
+     * @return RGB color
+     * @since 5.1
+     */
+    public static RGB fromHexColor(String color) {
+        return new RGB(Integer.valueOf(color.substring(1, 3), 16),
+                Integer.valueOf(color.substring(3, 5), 16),
+                Integer.valueOf(color.substring(5, 7), 16));
+    }
 }

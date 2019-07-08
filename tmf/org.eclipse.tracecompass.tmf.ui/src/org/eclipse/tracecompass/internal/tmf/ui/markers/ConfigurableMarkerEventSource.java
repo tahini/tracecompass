@@ -37,13 +37,14 @@ import org.eclipse.tracecompass.internal.tmf.core.markers.MarkerSet;
 import org.eclipse.tracecompass.internal.tmf.core.markers.SubMarker;
 import org.eclipse.tracecompass.internal.tmf.core.markers.SubMarker.SplitMarker;
 import org.eclipse.tracecompass.internal.tmf.core.markers.SubMarker.WeightedMarker;
+import org.eclipse.tracecompass.tmf.core.dataprovider.X11ColorUtils;
 import org.eclipse.tracecompass.tmf.core.signal.TmfMarkerEventSourceUpdatedSignal;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalHandler;
 import org.eclipse.tracecompass.tmf.core.signal.TmfSignalManager;
 import org.eclipse.tracecompass.tmf.core.trace.AbstractTmfTraceAdapterFactory.IDisposableAdapter;
 import org.eclipse.tracecompass.tmf.core.trace.ICyclesConverter;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
-import org.eclipse.tracecompass.tmf.ui.colors.X11Color;
+import org.eclipse.tracecompass.tmf.ui.colors.RGBAUtil;
 import org.eclipse.tracecompass.tmf.ui.markers.IMarkerReferenceProvider;
 import org.eclipse.tracecompass.tmf.ui.markers.PeriodicMarkerEventSource;
 import org.eclipse.tracecompass.tmf.ui.markers.PeriodicMarkerEventSource.Reference;
@@ -162,7 +163,7 @@ public class ConfigurableMarkerEventSource implements IMarkerEventSource, IDispo
                     Integer.valueOf(color.substring(3, 5), 16),
                     Integer.valueOf(color.substring(5, 7), 16));
         } else {
-            rgb = X11Color.toRGB(color);
+            rgb = RGBAUtil.fromHexColor(X11ColorUtils.toHexColor(color));
             if (rgb == null) {
                 rgb = new RGB(0, 0, 0);
             }

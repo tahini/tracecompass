@@ -1602,6 +1602,7 @@ public abstract class AbstractTimeGraphView extends TmfView implements ITmfTimeA
         resetView(signal.getTrace());
         if (signal.getTrace() == fTrace) {
             fTrace = null;
+            fPresentation.setTrace(null);
             fEditorFile = null;
             setStartTime(SWT.DEFAULT);
             setEndTime(SWT.DEFAULT);
@@ -1740,6 +1741,7 @@ public abstract class AbstractTimeGraphView extends TmfView implements ITmfTimeA
             fViewContext.put(fTrace, new ViewContext(fCurrentSortColumn, fSortDirection, fTimeGraphViewer.getSelection(), fTimeGraphViewer.getAllCollapsedElements()));
         }
         fTrace = trace;
+        fPresentation.setTrace(trace);
 
         TraceCompassLogUtils.traceInstant(LOGGER, Level.FINE, "TimeGraphView:LoadingTrace", "trace", trace.getName(), "viewId", getViewId()); //$NON-NLS-1$ //$NON-NLS-2$//$NON-NLS-3$
 
@@ -2650,7 +2652,9 @@ public abstract class AbstractTimeGraphView extends TmfView implements ITmfTimeA
         Multimap<@NonNull Integer, @NonNull String> regexes = HashMultimap.create();
 
         @NonNull String dialogRegex = fTimeEventFilterDialog != null ? fTimeEventFilterDialog.getTextBoxRegex() : ""; //$NON-NLS-1$
-        regexes.put(IFilterProperty.DIMMED, dialogRegex);
+        if (!dialogRegex.isEmpty()) {
+            regexes.put(IFilterProperty.DIMMED, dialogRegex);
+        }
 
         Set<@NonNull String> savedFilters = fTimeEventFilterDialog != null ? fTimeEventFilterDialog.getSavedFilters() : Collections.emptySet();
         for (String savedFilter : savedFilters) {

@@ -124,6 +124,9 @@ public class TimeGraphEntryModel extends TmfTreeDataModel implements ITimeGraphE
         return fHasRowModel;
     }
 
+    /**
+     * @since 5.1
+     */
     @Override
     public @Nullable Map<String, Object> getData() {
         return fData;
