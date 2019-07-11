@@ -31,6 +31,7 @@ public class TimeGraphState implements ITimeGraphState {
     private final int fValue;
     private final @Nullable String fLabel;
     private @Nullable OutputElementStyle fStyle;
+    private @Nullable Map<String, Object> fData;
 
     /**
      * A map of properties to activate or deactivate
@@ -107,6 +108,22 @@ public class TimeGraphState implements ITimeGraphState {
      */
     public void setStyle(OutputElementStyle style) {
         fStyle = style;
+    }
+
+    @Override
+    public @Nullable Map<String, Object> getData() {
+        return fData;
+    }
+
+    /**
+     * Set the additional data for this state
+     *
+     * @param data
+     *            Map of additional data to include
+     * @since 5.1
+     */
+    public void setData(Map<String, Object> data) {
+        fData = data;
     }
 
     @Override

@@ -11,7 +11,9 @@ package org.eclipse.tracecompass.tmf.core.model.timegraph;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.tmf.core.model.tree.TmfTreeDataModel;
 
 /**
@@ -24,6 +26,7 @@ public class TimeGraphEntryModel extends TmfTreeDataModel implements ITimeGraphE
     private final long fStartTime;
     private final long fEndTime;
     private final boolean fHasRowModel;
+    private @Nullable Map<String, Object> fData;
 
     /**
      * Constructor
@@ -119,6 +122,23 @@ public class TimeGraphEntryModel extends TmfTreeDataModel implements ITimeGraphE
     @Override
     public boolean hasRowModel() {
         return fHasRowModel;
+    }
+
+    @Override
+    public @Nullable Map<String, Object> getData() {
+        return fData;
+    }
+
+    /**
+     * Set additional data for this entry
+     *
+     * @param data
+     *            Map of additional data
+     * @since 5.1
+     */
+    public void setData(Map<String, Object> data) {
+        // TODO Bad do not set
+        fData = data;
     }
 
     @Override

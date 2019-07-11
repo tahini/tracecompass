@@ -11,6 +11,7 @@ package org.eclipse.tracecompass.tmf.core.model.tree;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
@@ -67,6 +68,16 @@ public interface ITmfTreeDataModel {
      * @since 5.1
      */
     default @Nullable OutputElementStyle getStyle() {
+        return null;
+    }
+
+    /**
+     * Get additional data for this model
+     *
+     * @return Map of additional data
+     * @since 5.1
+     */
+    default @Nullable Map<String, Object> getData() {
         return null;
     }
 
