@@ -54,11 +54,11 @@ import org.eclipse.tracecompass.internal.tmf.ui.Activator;
 import org.eclipse.tracecompass.internal.tmf.ui.ITmfImageConstants;
 import org.eclipse.tracecompass.internal.tmf.ui.Messages;
 import org.eclipse.tracecompass.internal.tmf.ui.util.TimeGraphStyleUtil;
+import org.eclipse.tracecompass.tmf.core.model.ITimeEventStyleStrings;
 import org.eclipse.tracecompass.tmf.core.presentation.RGBAColor;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.GroupedStateItem;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.ITimeGraphPresentationProvider;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.StateItem;
-import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEventStyleStrings;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Collections2;

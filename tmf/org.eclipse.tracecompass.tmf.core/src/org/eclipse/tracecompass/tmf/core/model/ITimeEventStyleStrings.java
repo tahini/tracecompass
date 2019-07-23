@@ -7,9 +7,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-package org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model;
-
-import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.ITimeGraphPresentationProvider;
+package org.eclipse.tracecompass.tmf.core.model;
 
 /**
  * <p>
@@ -37,12 +35,8 @@ import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.ITimeGraphPresentationP
  *
  * @author Matthew Khouzam
  * @noimplement This interface is not intended to be implemented by clients.
- * @since 3.0
- * @deprecated Use the
- *             {@link org.eclipse.tracecompass.tmf.core.model.ITimeEventStyleStrings}
- *             class instead
+ * @since 5.1
  */
-@Deprecated
 public interface ITimeEventStyleStrings {
 
     /**
@@ -165,9 +159,8 @@ public interface ITimeEventStyleStrings {
     }
 
     /**
-     * Item property. Possible values are
-     * {@link ITimeEventStyleStrings#stateType()} or
-     * {@link ITimeEventStyleStrings#linkType()}
+     * Item property. Possible values are {@link ITimeEventStyleStrings#stateType()}
+     * or {@link ITimeEventStyleStrings#linkType()}
      *
      * @return The key to get the item property of a state item
      * @since 4.0
@@ -197,8 +190,7 @@ public interface ITimeEventStyleStrings {
     }
 
     /**
-     * The event is annotated. When this is set, the label will not be drawn and
-     * {@link ITimeGraphPresentationProvider#postDrawEvent} will not be called
+     * The event is annotated. When this is set, the label will not be drawn
      *
      * @return the key to get the annotated value
      * @since 4.0
@@ -208,9 +200,8 @@ public interface ITimeEventStyleStrings {
     }
 
     /**
-     * Indicate that the item has a symbol style associated to it. Values
-     * associated to it are defined in
-     * {@link org.eclipse.tracecompass.tmf.core.presentation.IYAppearance.SymbolStyle}
+     * Indicate that the item has a symbol style associated to it.
+     * Values associated to it are defined in {@link org.eclipse.tracecompass.tmf.core.presentation.IYAppearance.SymbolStyle}
      *
      * @return the key associated to the symbol style.
      * @since 4.1

@@ -15,8 +15,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.tracecompass.tmf.core.model.ITimeEventStyleStrings;
 import org.eclipse.tracecompass.tmf.core.presentation.RGBAColor;
-import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEventStyleStrings;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.widgets.TimeGraphControl;
 
 import com.google.common.collect.ImmutableMap;
