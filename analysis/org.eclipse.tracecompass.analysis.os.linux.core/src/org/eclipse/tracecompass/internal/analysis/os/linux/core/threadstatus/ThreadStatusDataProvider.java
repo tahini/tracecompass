@@ -31,9 +31,11 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.os.linux.core.kernel.KernelAnalysisModule;
 import org.eclipse.tracecompass.analysis.os.linux.core.model.OsStrings;
+import org.eclipse.tracecompass.analysis.os.linux.core.model.ProcessStatus;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.Activator;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.kernel.Attributes;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.kernel.StateValues;
+import org.eclipse.tracecompass.internal.analysis.os.linux.core.registry.LinuxStyle;
 import org.eclipse.tracecompass.internal.tmf.core.model.AbstractTmfTraceDataProvider;
 import org.eclipse.tracecompass.internal.tmf.core.model.filters.FetchParametersUtils;
 import org.eclipse.tracecompass.statesystem.core.ITmfStateSystem;
@@ -45,6 +47,10 @@ import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;
 import org.eclipse.tracecompass.statesystem.core.interval.TmfStateInterval;
 import org.eclipse.tracecompass.tmf.core.dataprovider.DataProviderParameterUtils;
 import org.eclipse.tracecompass.tmf.core.model.CommonStatusMessage;
+import org.eclipse.tracecompass.tmf.core.model.IOutputStyleProvider;
+import org.eclipse.tracecompass.tmf.core.model.ITimeEventStyleStrings;
+import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
+import org.eclipse.tracecompass.tmf.core.model.OutputStyleModel;
 import org.eclipse.tracecompass.tmf.core.model.filters.SelectionTimeQueryFilter;
 import org.eclipse.tracecompass.tmf.core.model.filters.TimeQueryFilter;
 import org.eclipse.tracecompass.tmf.core.model.timegraph.ITimeGraphArrow;
@@ -78,7 +84,7 @@ import com.google.common.collect.TreeMultimap;
  *
  * @author Simon Delisle
  */
-public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider implements ITimeGraphDataProvider<@NonNull ThreadEntryModel> {
+public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider implements ITimeGraphDataProvider<@NonNull ThreadEntryModel>, IOutputStyleProvider {
 
     /**
      * Extension point ID.
@@ -103,6 +109,31 @@ public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider imple
      * Atomic Long so that every {@link ThreadEntryModel} has a unique ID.
      */
     private static final AtomicLong fAtomicLong = new AtomicLong();
+
+    private static final @NonNull Map<@NonNull String, @NonNull OutputElementStyle> STATE_MAP;
+    private static final @NonNull OutputElementStyle DEFAULT_ELEMENT = new OutputElementStyle(null, LinuxStyle.UNKNOWN.toMap());
+    private static final int LINK_VALUE = 8;
+
+    static {
+        ImmutableMap.Builder<String, OutputElementStyle> builder = new ImmutableMap.Builder<>();
+        /*
+         * ADD STATE MAPPING HERE
+         */
+        builder.put(String.valueOf(ProcessStatus.UNKNOWN.getStateValue().unboxInt()), DEFAULT_ELEMENT);
+        builder.put(String.valueOf(ProcessStatus.RUN.getStateValue().unboxInt()), new OutputElementStyle(null, LinuxStyle.USERMODE.toMap()));
+        builder.put(String.valueOf(ProcessStatus.RUN_SYTEMCALL.getStateValue().unboxInt()), new OutputElementStyle(null, LinuxStyle.SYSCALL.toMap()));
+        builder.put(String.valueOf(ProcessStatus.INTERRUPTED.getStateValue().unboxInt()), new OutputElementStyle(null, LinuxStyle.INTERRUPTED.toMap()));
+        builder.put(String.valueOf(ProcessStatus.WAIT_BLOCKED.getStateValue().unboxInt()), new OutputElementStyle(null, LinuxStyle.WAIT_BLOCKED.toMap()));
+        builder.put(String.valueOf(ProcessStatus.WAIT_CPU.getStateValue().unboxInt()), new OutputElementStyle(null, LinuxStyle.WAIT_FOR_CPU.toMap()));
+        builder.put(String.valueOf(ProcessStatus.WAIT_UNKNOWN.getStateValue().unboxInt()), new OutputElementStyle(null, LinuxStyle.WAIT_UNKNOWN.toMap()));
+
+        LinuxStyle link = LinuxStyle.LINK;
+        ImmutableMap.Builder<String, Object> linkBuilder = new ImmutableMap.Builder<>();
+        linkBuilder.putAll(link.toMap());
+        linkBuilder.put(ITimeEventStyleStrings.itemTypeProperty(), ITimeEventStyleStrings.linkType());
+        builder.put(String.valueOf(LINK_VALUE), new OutputElementStyle(null, linkBuilder.build()));
+        STATE_MAP = builder.build();
+    }
 
     private final KernelAnalysisModule fModule;
     private final long fTraceId = fAtomicLong.getAndIncrement();
@@ -489,6 +520,7 @@ public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider imple
         long startTime = interval.getStartTime();
         long duration = interval.getEndTime() - startTime + 1;
         Object status = interval.getValue();
+        TimeGraphState state = null;
         if (status instanceof Integer) {
             int s = (int) status;
             if (s == StateValues.PROCESS_STATUS_RUN_SYSCALL) {
@@ -498,11 +530,15 @@ public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider imple
                 if (syscall != null) {
                     Object value = syscall.getValue();
                     if (value instanceof String) {
-                        return new TimeGraphState(startTime, duration, s, String.valueOf(value));
+                        state = new TimeGraphState(startTime, duration, s, String.valueOf(value));
                     }
                 }
             }
-            return new TimeGraphState(startTime, duration, s);
+            if (state == null) {
+                state = new TimeGraphState(startTime, duration, s);
+            }
+            state.setStyle(STATE_MAP.getOrDefault(String.valueOf(s), DEFAULT_ELEMENT));
+            return state;
         }
         return new TimeGraphState(startTime, duration, Integer.MIN_VALUE);
     }
@@ -600,7 +636,7 @@ public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider imple
             if (tid != null && tid > 0) {
                 nextEntry = findEntry(tid, time);
                 if (prevEntry >= 0 && nextEntry >= 0) {
-                    linkList.add(new TimeGraphArrow(prevEntry, nextEntry, prevEnd, time - prevEnd));
+                    linkList.add(new TimeGraphArrow(prevEntry, nextEntry, prevEnd, time - prevEnd, LINK_VALUE));
                 }
                 prevEntry = nextEntry;
                 prevEnd = lastEnd;
@@ -729,6 +765,20 @@ public class ThreadStatusDataProvider extends AbstractTmfTraceDataProvider imple
             }
         }
         return data;
+    }
+
+    @Override
+    public TmfModelResponse<OutputStyleModel> fetchStyle(Map<String, Object> fetchParameters, @Nullable IProgressMonitor monitor) {
+        return new TmfModelResponse<>(new OutputStyleModel(STATE_MAP), ITmfResponse.Status.COMPLETED, CommonStatusMessage.COMPLETED);
+    }
+
+    /**
+     * Get the style map for this data provider
+     *
+     * @return The style map
+     */
+    public static @NonNull Map<@NonNull String, @NonNull OutputElementStyle> getStyleMap() {
+        return STATE_MAP;
     }
 
 }

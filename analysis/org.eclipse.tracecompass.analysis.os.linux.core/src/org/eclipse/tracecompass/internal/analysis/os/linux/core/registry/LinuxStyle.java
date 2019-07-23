@@ -7,12 +7,12 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-package org.eclipse.tracecompass.internal.analysis.os.linux.ui.registry;
+package org.eclipse.tracecompass.internal.analysis.os.linux.core.registry;
 
 import java.util.Map;
 
+import org.eclipse.tracecompass.tmf.core.model.ITimeEventStyleStrings;
 import org.eclipse.tracecompass.tmf.core.presentation.RGBAColor;
-import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEventStyleStrings;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -26,57 +26,57 @@ public enum LinuxStyle {
     /**
      * Unknown state for thread or CPU
      */
-    UNKNOWN(Messages.LinuxStyles_unknown, 100, 100, 100, 255, 0.33f),
+    UNKNOWN(String.valueOf(Messages.LinuxStyles_unknown), 100, 100, 100, 255, 0.33f),
 
     /**
      * Link style, the general line style
      */
-    LINK(Messages.LinuxStyles_unknown, 100, 100, 100, 255, 0.10f),
+    LINK(String.valueOf(Messages.LinuxStyles_unknown), 100, 100, 100, 255, 0.10f),
 
     /**
      * Wait for an unknown reason
      */
-    WAIT_UNKNOWN(Messages.LinuxStyles_wait, 200, 200, 200, 255, 0.50f),
+    WAIT_UNKNOWN(String.valueOf(Messages.LinuxStyles_wait), 200, 200, 200, 255, 0.50f),
 
     /**
      * Wait to be scheduled back in
      */
-    WAIT_BLOCKED(Messages.LinuxStyles_waitBlocked, 200, 200, 0, 255, 0.50f),
+    WAIT_BLOCKED(String.valueOf(Messages.LinuxStyles_waitBlocked), 200, 200, 0, 255, 0.50f),
 
     /**
      * Wait for the CPU to be available
      */
-    WAIT_FOR_CPU(Messages.LinuxStyles_waitForCPU, 200, 100, 0, 255, 0.50f),
+    WAIT_FOR_CPU(String.valueOf(Messages.LinuxStyles_waitForCPU), 200, 100, 0, 255, 0.50f),
 
     /**
      * CPU is idle
      */
-    IDLE(Messages.LinuxStyles_idle, 200, 200, 200, 255, 0.66f),
+    IDLE(String.valueOf(Messages.LinuxStyles_idle), 200, 200, 200, 255, 0.66f),
 
     /**
      * CPU or thread is in usermode
      */
-    USERMODE(Messages.LinuxStyles_usermode, 0, 200, 0, 255, 1.00f),
+    USERMODE(String.valueOf(Messages.LinuxStyles_usermode), 0, 200, 0, 255, 1.00f),
 
     /**
      * CPU or thread is in a system call
      */
-    SYSCALL(Messages.LinuxStyles_systemCall, 0, 0, 200, 255, 1.00f),
+    SYSCALL(String.valueOf(Messages.LinuxStyles_systemCall), 0, 0, 200, 255, 1.00f),
 
     /**
      * CPU is in an IRQ
      */
-    INTERRUPTED(Messages.LinuxStyles_Interrupt, 200, 0, 100, 255, 0.75f),
+    INTERRUPTED(String.valueOf(Messages.LinuxStyles_Interrupt), 200, 0, 100, 255, 0.75f),
 
     /**
      * A Softirq or tasklet is raised
      */
-    SOFT_IRQ_RAISED(Messages.LinuxStyles_softIrqRaised, 200, 200, 0, 255, 1.00f),
+    SOFT_IRQ_RAISED(String.valueOf(Messages.LinuxStyles_softIrqRaised), 200, 200, 0, 255, 1.00f),
 
     /**
      * CPU is in a softirq or tasklet
      */
-    SOFT_IRQ(Messages.LinuxStyles_softrq, 200, 150, 100, 255, 1.00f);
+    SOFT_IRQ(String.valueOf(Messages.LinuxStyles_softrq), 200, 150, 100, 255, 1.00f);
 
     private final Map<String, Object> fMap;
 
@@ -97,9 +97,6 @@ public enum LinuxStyle {
      *            the hint of the height, between 0 and 1.0
      */
     private LinuxStyle(String label, int red, int green, int blue, int alpha, float heightFactor) {
-        if (label == null) {
-            throw new IllegalArgumentException("Label cannot be null"); //$NON-NLS-1$
-        }
         if (red > 255 || red < 0) {
             throw new IllegalArgumentException("Red needs to be between 0 and 255"); //$NON-NLS-1$
         }
@@ -127,7 +124,7 @@ public enum LinuxStyle {
      * @return the label to display
      */
     public String getLabel() {
-        return (String) toMap().get(ITimeEventStyleStrings.label());
+        return (String) toMap().getOrDefault(ITimeEventStyleStrings.label(), ""); //$NON-NLS-1$
     }
 
     /**

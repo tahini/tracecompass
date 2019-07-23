@@ -9,6 +9,8 @@
 
 package org.eclipse.tracecompass.tmf.ui.widgets.timegraph;
 
+import java.util.Map;
+
 import org.eclipse.swt.graphics.RGB;
 
 /**
@@ -33,6 +35,19 @@ public class GroupedStateItem extends StateItem {
      */
     public GroupedStateItem(RGB rgb, String label, String groupLabel) {
         super(rgb, label);
+        fGroupeLabel = groupLabel;
+    }
+
+    /**
+     * Constructor
+     *
+     * @param style
+     *            StateItem color
+     * @param groupLabel
+     *            StateItem group
+     */
+    public GroupedStateItem(Map<String, Object> style, String groupLabel) {
+        super(style);
         fGroupeLabel = groupLabel;
     }
 

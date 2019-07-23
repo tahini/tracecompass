@@ -79,6 +79,7 @@ import org.eclipse.tracecompass.tmf.ui.views.FormatTimeUtils;
 import org.eclipse.tracecompass.tmf.ui.views.FormatTimeUtils.Resolution;
 import org.eclipse.tracecompass.tmf.ui.views.FormatTimeUtils.TimeFormat;
 import org.eclipse.tracecompass.tmf.ui.views.timegraph.BaseDataProviderTimeGraphView;
+import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.BaseDataProviderTimeGraphPresentationProvider;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ILinkEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeGraphEntry;
@@ -211,7 +212,7 @@ public class ControlFlowView extends BaseDataProviderTimeGraphView {
      * Constructor
      */
     public ControlFlowView() {
-        super(ID, new ControlFlowPresentationProvider(), ThreadStatusDataProvider.ID);
+        super(ID, new BaseDataProviderTimeGraphPresentationProvider(ThreadStatusDataProvider.ID), ThreadStatusDataProvider.ID);
         setTreeColumns(COLUMN_NAMES, COLUMN_COMPARATORS, INITIAL_SORT_COLUMN_INDEX);
         setTreeLabelProvider(new ControlFlowTreeLabelProvider());
         setFilterColumns(FILTER_COLUMN_NAMES);

@@ -7,8 +7,9 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
 
-package org.eclipse.tracecompass.internal.analysis.os.linux.ui.registry;
+package org.eclipse.tracecompass.internal.analysis.os.linux.core.registry;
 
+import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.osgi.util.NLS;
 
 /**
@@ -17,47 +18,47 @@ import org.eclipse.osgi.util.NLS;
  * @author Matthew Khouzam
  */
 public class Messages extends NLS {
-    private static final String BUNDLE_NAME = "org.eclipse.tracecompass.internal.analysis.os.linux.ui.registry.messages"; //$NON-NLS-1$
+    private static final String BUNDLE_NAME = "org.eclipse.tracecompass.internal.analysis.os.linux.core.registry.messages"; //$NON-NLS-1$
     /**
      * Idle
      */
-    public static String LinuxStyles_idle;
+    public static @Nullable String LinuxStyles_idle = null;
     /**
      * Irq
      */
-    public static String LinuxStyles_Interrupt;
+    public static @Nullable String LinuxStyles_Interrupt = null;
     /**
      * Softirq raised
      */
-    public static String LinuxStyles_softIrqRaised;
+    public static @Nullable String LinuxStyles_softIrqRaised = null;
     /**
      * Softirq
      */
-    public static String LinuxStyles_softrq;
+    public static @Nullable String LinuxStyles_softrq = null;
     /**
      * Syscall
      */
-    public static String LinuxStyles_systemCall;
+    public static @Nullable String LinuxStyles_systemCall = null;
     /**
      * Unknown
      */
-    public static String LinuxStyles_unknown;
+    public static @Nullable String LinuxStyles_unknown = null;
     /**
      * User mode
      */
-    public static String LinuxStyles_usermode;
+    public static @Nullable String LinuxStyles_usermode = null;
     /**
      * Wait
      */
-    public static String LinuxStyles_wait;
+    public static @Nullable String LinuxStyles_wait = null;
     /**
      * Wait blocked
      */
-    public static String LinuxStyles_waitBlocked;
+    public static @Nullable String LinuxStyles_waitBlocked = null;
     /**
      * Wait for CPU
      */
-    public static String LinuxStyles_waitForCPU;
+    public static @Nullable String LinuxStyles_waitForCPU = null;
     static {
         // initialize resource bundle
         NLS.initializeMessages(BUNDLE_NAME, Messages.class);

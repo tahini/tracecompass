@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.eclipse.jdt.annotation.NonNull;
-import org.eclipse.swt.graphics.RGB;
 import org.eclipse.tracecompass.internal.tmf.core.model.filters.FetchParametersUtils;
 import org.eclipse.tracecompass.tmf.core.dataprovider.DataProviderManager;
 import org.eclipse.tracecompass.tmf.core.model.IOutputStyleProvider;
+import org.eclipse.tracecompass.tmf.core.model.ITimeEventStyleStrings;
 import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
 import org.eclipse.tracecompass.tmf.core.model.OutputStyleModel;
 import org.eclipse.tracecompass.tmf.core.model.filters.SelectionTimeQueryFilter;
@@ -59,11 +59,15 @@ public class BaseDataProviderTimeGraphPresentationProvider extends TimeGraphPres
         fProviderId = dataProviderId;
     }
 
+    protected String getProviderId() {
+        return fProviderId;
+    }
+
     public Map<@NonNull String, @NonNull OutputElementStyle> getStyles() {
         ITmfTrace parentTrace = getTrace();
         if (fStylesMap == null && parentTrace != null) {
             fStylesMap = new HashMap<>();
-            ITimeGraphDataProvider provider = DataProviderManager.getInstance().getDataProvider(parentTrace, fProviderId, ITimeGraphDataProvider.class);
+            ITimeGraphDataProvider provider = DataProviderManager.getInstance().getDataProvider(parentTrace, getProviderId(), ITimeGraphDataProvider.class);
             if (parentTrace instanceof TmfExperiment) {
                 Collection<@NonNull ITmfTrace> traces = TmfTraceManager.getTraceSet(parentTrace);
                 for (ITmfTrace trace : traces) {
@@ -117,17 +121,15 @@ public class BaseDataProviderTimeGraphPresentationProvider extends TimeGraphPres
             for (Entry<@NonNull String, @NonNull OutputElementStyle> styleEntry : fStylesMap.entrySet()) {
                 Map<@NonNull String, @NonNull Object> elementStyle = styleEntry.getValue().getStyleValues();
                 // TODO Handle other style, right now it is just color
-                Object color = elementStyle.get("color");
-                int intColor = Integer.parseInt((String) color, 16);
-                RGB rgb = new RGB((intColor >> 16) & 0xff, (intColor >> 8) & 0xff, (intColor) & 0xff);
                 fLabelToIndex.put(styleEntry.getKey(), tableIndex);
                 tableIndex++;
+
                 // TODO I don't like that, not sure what to do here
                 Object groupLabel = elementStyle.get("group");
                 if (groupLabel instanceof String) {
-                    stateItemList.add(new GroupedStateItem(rgb, styleEntry.getKey(), (String) groupLabel));
+                    stateItemList.add(new GroupedStateItem(elementStyle, (String) groupLabel));
                 } else {
-                    stateItemList.add(new StateItem(rgb, styleEntry.getKey()));
+                    stateItemList.add(new StateItem(elementStyle));
                 }
             }
             fStateTable = stateItemList.toArray(new StateItem[stateItemList.size()]);
@@ -141,30 +143,36 @@ public class BaseDataProviderTimeGraphPresentationProvider extends TimeGraphPres
         if (event instanceof NullTimeEvent) {
             return INVISIBLE;
         }
-//
-//  if(event instanceof TimeEvent) {
-//      ITimeGraphEntry entry = event.getEntry();
-//      if(entry instanceof TimeGraphEntry) {
-//          ITmfTreeDataModel model = ((TimeGraphEntry) entry).getEntryModel();
-//          if(model instanceof EmcaResourcesEntryModel && ((EmcaResourcesEntryModel) model).getEntryType() == com.ericsson.flex.tracing.core.emcaresources.EmcaResourcesEntryModel.Type.TICK) {
-//              return ((TimeEvent) event).getValue() != Integer.MIN_VALUE ? 5 : INVISIBLE;
-//          }
-//      }
-//      return ((TimeEvent) event).getValue() != Integer.MIN_VALUE ? ((TimeEvent) event).getValue() : TRANSPARENT;
-//  }
-//  return TRANSPARENT;
+
+        if(event instanceof TimeEvent) {
+            if (((TimeEvent) event).hasValue()) {
+                Integer index = fLabelToIndex.get(String.valueOf(((TimeEvent) event).getValue()));
+                return index != null ? index: 0;
+            }
+
+        }
+        return TRANSPARENT;
+    }
+
+    /**
+     * Get the style map of a given ITimeEvent
+     *
+     * @param event
+     *            the time event
+     * @return the style map, as detailed in {@link ITimeEventStyleStrings}
+     * @since 3.0
+     */
+    @Override
+    public Map<String, Object> getEventStyle(ITimeEvent event) {
+        Map<String, Object> styles = new HashMap<>();
         if(event instanceof TimeEvent) {
             ITimeGraphState model = ((TimeEvent) event).getStateModel();
             OutputElementStyle eventStyle = model.getStyle();
-            if(eventStyle != null) {
-                String styleKey = eventStyle.getParentKey();
-                if(styleKey != null) {
-                    Integer index = fLabelToIndex.get(styleKey);
-                    return index != null ? index: TRANSPARENT;
-                }
+            if (eventStyle != null) {
+                styles.putAll(eventStyle.getStyleValues());
             }
         }
-        return TRANSPARENT;
+        return styles;
     }
 
     @Override
