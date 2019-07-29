@@ -41,6 +41,8 @@ import org.eclipse.tracecompass.tmf.core.model.tree.TmfTreeModel;
 import org.eclipse.tracecompass.tmf.core.response.ITmfResponse;
 import org.eclipse.tracecompass.tmf.core.response.TmfModelResponse;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
+import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.BaseDataProviderTimeGraphPresentationProvider;
+import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.ITimeGraphPresentationProvider;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.TimeGraphPresentationProvider;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ILinkEvent;
 import org.eclipse.tracecompass.tmf.ui.widgets.timegraph.model.ITimeEvent;
@@ -645,5 +647,17 @@ public class BaseDataProviderTimeGraphView extends AbstractTimeGraphView {
             fAggregateGroup.clear();
         }
     }
+
+    @Override
+    protected void loadingTrace(@NonNull ITmfTrace trace) {
+        ITimeGraphDataProvider<@NonNull TimeGraphEntryModel> dataProvider = DataProviderManager
+                .getInstance().getDataProvider(trace, getProviderId(), ITimeGraphDataProvider.class);
+        ITimeGraphPresentationProvider presentationProvider = getPresentationProvider();
+        if (dataProvider != null && presentationProvider instanceof BaseDataProviderTimeGraphPresentationProvider) {
+            ((BaseDataProviderTimeGraphPresentationProvider) presentationProvider).setDataProvider(dataProvider);
+        }
+    }
+
+
 
 }
