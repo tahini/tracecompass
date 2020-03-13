@@ -52,6 +52,7 @@ public class TmfXyModel implements ITmfXyModel {
         return fTitle;
     }
 
+    @Deprecated
     @Override
     public Map<String, ISeriesModel> getData() {
         return fSeries;

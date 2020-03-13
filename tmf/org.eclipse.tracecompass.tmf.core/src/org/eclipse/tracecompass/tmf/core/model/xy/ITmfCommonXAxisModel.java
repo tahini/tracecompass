@@ -11,6 +11,7 @@
 
 package org.eclipse.tracecompass.tmf.core.model.xy;
 
+import java.util.Collection;
 import java.util.Map;
 
 import org.eclipse.tracecompass.tmf.core.viewmodel.ICommonXAxisModel;
@@ -65,5 +66,16 @@ public interface ITmfCommonXAxisModel extends ITmfXyModel {
      *
      * @return the collection of Y values.
      */
+    @Deprecated
     Map<String, IYModel> getYData();
+
+    /**
+     * Get the collection of {@link IYModel}
+     *
+     * @return the collection of Y values.
+     * @since 5.3
+     */
+    default Collection<IYModel> getYSeriesData() {
+        return getYData().values();
+    }
 }
