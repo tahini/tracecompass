@@ -21,9 +21,9 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.cpuusage.CpuUsageDataProvider;
 import org.eclipse.tracecompass.internal.tmf.core.model.filters.FetchParametersUtils;
+import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
 import org.eclipse.tracecompass.tmf.core.model.filters.SelectionTimeQueryFilter;
 import org.eclipse.tracecompass.tmf.core.presentation.IXYPresentationProvider;
-import org.eclipse.tracecompass.tmf.core.presentation.IYAppearance;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.ui.viewers.xycharts.linecharts.TmfFilteredXYChartViewer;
 import org.eclipse.tracecompass.tmf.ui.viewers.xycharts.linecharts.TmfXYChartSettings;
@@ -61,9 +61,8 @@ public class CpuUsageXYViewer extends TmfFilteredXYChartViewer {
     }
 
     @Override
-    public IYAppearance getSeriesAppearance(@NonNull Long seriesId) {
-        return getPresentationProvider().getAppearance(seriesId);
-    }
+    public OutputElementStyle getSeriesStyle(@NonNull Long seriesId) {
+        return getPresentationProvider().getSeriesStyle(seriesId);    }
 
     /**
      * Update the {@link CpuUsageXYViewer} title to append the current cpu numbers
