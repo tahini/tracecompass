@@ -11,14 +11,11 @@
 
 package org.eclipse.tracecompass.internal.analysis.os.linux.ui.views.io.diskioactivity;
 
-import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.tracecompass.common.core.format.DataSpeedWithUnitFormat;
 import org.eclipse.tracecompass.internal.analysis.os.linux.core.inputoutput.DisksIODataProvider;
-import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
-import org.eclipse.tracecompass.tmf.core.model.StyleProperties;
 import org.eclipse.tracecompass.tmf.ui.viewers.xycharts.linecharts.TmfFilteredXYChartViewer;
 import org.eclipse.tracecompass.tmf.ui.viewers.xycharts.linecharts.TmfXYChartSettings;
 import org.swtchart.Chart;
@@ -29,8 +26,6 @@ import org.swtchart.Chart;
  * @author Houssem Daoud
  */
 public class DisksIOActivityViewer extends TmfFilteredXYChartViewer {
-
-    private static final int DEFAULT_SERIES_WIDTH = 1;
 
     /**
      * Constructor
@@ -45,11 +40,6 @@ public class DisksIOActivityViewer extends TmfFilteredXYChartViewer {
         Chart chart = getSwtChart();
         chart.getAxisSet().getYAxis(0).getTick().setFormat(DataSpeedWithUnitFormat.getInstance());
         chart.getLegend().setPosition(SWT.LEFT);
-    }
-
-    @Override
-    public OutputElementStyle getSeriesStyle(@NonNull Long seriesId) {
-        return getPresentationProvider().getSeriesStyle(seriesId, StyleProperties.SeriesType.LINE, DEFAULT_SERIES_WIDTH);
     }
 
 }

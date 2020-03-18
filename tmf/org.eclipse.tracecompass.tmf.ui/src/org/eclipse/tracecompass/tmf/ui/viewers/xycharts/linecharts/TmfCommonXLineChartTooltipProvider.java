@@ -98,7 +98,7 @@ public class TmfCommonXLineChartTooltipProvider extends TmfBaseProvider implemen
                         String key = serie.getId();
                         if (key != null && viewer != null) {
                             IYAppearance appearance = viewer.getSeriesAppearance(key);
-                            key = String.format(HTML_COLOR_TOOLTIP, appearance.getColor(), key);
+                            key = String.format(HTML_COLOR_TOOLTIP, appearance.getColor(), appearance.getName());
                         }
                         if (key == null) {
                             key = ""; //$NON-NLS-1$
