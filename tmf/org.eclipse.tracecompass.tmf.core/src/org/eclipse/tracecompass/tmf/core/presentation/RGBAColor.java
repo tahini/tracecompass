@@ -110,13 +110,13 @@ public class RGBAColor {
      * @since 4.1
      */
     public static @Nullable RGBAColor fromString(String rgbaString) {
-        if (rgbaString.length() != 9 || rgbaString.charAt(0) != '#') {
+        if ((rgbaString.length() != 9 && rgbaString.length() != 7) || rgbaString.charAt(0) != '#') {
             return null;
         }
         int r = toInt(rgbaString.charAt(1), rgbaString.charAt(2));
         int g = toInt(rgbaString.charAt(3), rgbaString.charAt(4));
         int b = toInt(rgbaString.charAt(5), rgbaString.charAt(6));
-        int a = toInt(rgbaString.charAt(7), rgbaString.charAt(8));
+        int a = rgbaString.length() == 7 ? 255 : toInt(rgbaString.charAt(7), rgbaString.charAt(8));
         if (r == -1 || g == -1 || b == -1 || a == -1) {
             return null;
         }
