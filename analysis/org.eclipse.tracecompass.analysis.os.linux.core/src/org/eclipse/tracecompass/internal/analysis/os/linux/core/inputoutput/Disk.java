@@ -180,7 +180,7 @@ public class Disk {
     public static double extractCount(int sectorQuark, ITmfStateSystem ss, List<ITmfStateInterval> states, long ts) {
         // Determine if we are handling read or write requests.
         String sectorName = ss.getAttributeName(sectorQuark);
-        int rw = sectorName.equals(Attributes.SECTORS_READ) ? StateValues.READING_REQUEST : StateValues.WRITING_REQUEST;
+        IoOperationType rw = sectorName.equals(Attributes.SECTORS_READ) ? IoOperationType.READ : IoOperationType.WRITE;
 
         // Get the initial value.
         Object stateValue = states.get(sectorQuark).getValue();
