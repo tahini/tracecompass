@@ -27,7 +27,6 @@ import org.eclipse.tracecompass.internal.tmf.core.model.xy.AbstractTreeCommonXDa
 import org.eclipse.tracecompass.statesystem.core.ITmfStateSystem;
 import org.eclipse.tracecompass.statesystem.core.exceptions.StateSystemDisposedException;
 import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;
-import org.eclipse.tracecompass.tmf.core.dataprovider.X11ColorUtils;
 import org.eclipse.tracecompass.tmf.core.model.CommonStatusMessage;
 import org.eclipse.tracecompass.tmf.core.model.IOutputStyleProvider;
 import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
@@ -42,6 +41,7 @@ import org.eclipse.tracecompass.tmf.core.response.ITmfResponse;
 import org.eclipse.tracecompass.tmf.core.response.TmfModelResponse;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 import org.eclipse.tracecompass.tmf.core.trace.TmfTraceUtils;
+import org.eclipse.tracecompass.tmf.core.util.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -70,9 +70,7 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
 
     private static final String BASE_STYLE = "base"; //$NON-NLS-1$
     private static final Map<String, OutputElementStyle> STATE_MAP;
-    private static final int NB_COLORS = 5;
-    private static final List<String> READ_COLORS;
-    private static final List<String> WRITE_COLORS;
+    private static final List<Pair<String, String>> COLOR_LIST = IODataPalette.getColors();
     private static final List<String> SUPPORTED_STYLES = ImmutableList.of(
             StyleProperties.SeriesStyle.SOLID,
             StyleProperties.SeriesStyle.DASH,
@@ -85,24 +83,6 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
         ImmutableMap.Builder<@NonNull String, @NonNull OutputElementStyle> builder = new ImmutableMap.Builder<>();
         builder.put(BASE_STYLE, new OutputElementStyle(null, ImmutableMap.of(StyleProperties.SERIES_TYPE, StyleProperties.SeriesType.AREA, StyleProperties.WIDTH, 1.0f)));
         STATE_MAP = builder.build();
-
-        // Create the palette for reading (blue)
-        ImmutableList.Builder<String> colorBuilder = new ImmutableList.Builder<>();
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("red"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("orange red"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("firebrick"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("web maroon"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("orange"))); //$NON-NLS-1$
-        WRITE_COLORS = colorBuilder.build();
-
-        // Create the palette for writing (red)
-        colorBuilder = new ImmutableList.Builder<>();
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("blue"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("cyan"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("deep sky blue"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("navy blue"))); //$NON-NLS-1$
-        colorBuilder.add(Objects.requireNonNull(X11ColorUtils.toHexColor("pale turquoise"))); //$NON-NLS-1$
-        READ_COLORS = colorBuilder.build();
     }
 
     /**
@@ -214,15 +194,14 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
             nodes.add(new TmfTreeDataModel(diskId, rootId, Collections.singletonList(diskName), false, null));
 
             // Get read and write color for this disk
-            String readColor = READ_COLORS.get(i % NB_COLORS);
-            String writeColor = WRITE_COLORS.get(i % NB_COLORS);
-            String seriesStyle = SUPPORTED_STYLES.get((i / NB_COLORS) % SUPPORTED_STYLES.size());
+            Pair<String, String> pair = COLOR_LIST.get(i % COLOR_LIST.size());
+            String seriesStyle = SUPPORTED_STYLES.get((i / COLOR_LIST.size()) % SUPPORTED_STYLES.size());
 
             int readQuark = ss.optQuarkRelative(diskQuark, Attributes.SECTORS_READ);
             if (readQuark != ITmfStateSystem.INVALID_ATTRIBUTE) {
                 nodes.add(new TmfTreeDataModel(getId(readQuark), diskId, Collections.singletonList(readName), true,
                         new OutputElementStyle(BASE_STYLE, ImmutableMap.of(
-                                StyleProperties.COLOR, readColor,
+                                StyleProperties.COLOR, pair.getFirst(),
                                 StyleProperties.SERIES_STYLE, seriesStyle,
                                 StyleProperties.STYLE_NAME, diskName + '/' + readName))));
             }
@@ -231,7 +210,7 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
             if (writeQuark != ITmfStateSystem.INVALID_ATTRIBUTE) {
                 nodes.add(new TmfTreeDataModel(getId(writeQuark), diskId, Collections.singletonList(writeName), true,
                         new OutputElementStyle(BASE_STYLE, ImmutableMap.of(
-                        StyleProperties.COLOR, writeColor,
+                        StyleProperties.COLOR, pair.getSecond(),
                         StyleProperties.SERIES_STYLE, seriesStyle,
                         StyleProperties.STYLE_NAME, diskName + '/' + writeName))));
             }
