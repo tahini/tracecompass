@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.eclipse.jdt.annotation.NonNull;
@@ -33,7 +34,7 @@ public class StateSystemSegmentStore implements ISegmentStore<ISegment> {
 
     //private final ReadWriteLock fLock = new ReentrantReadWriteLock(false);
     private final ITmfStateSystem fStateSystem;
-    private final List<Integer> fSegmentQuarks;
+    private final Map<Integer, Disk> fSegmentQuarks;
 
     Comparator<ITmfStateInterval> cmp = (x, y) -> {
         if (x.getStartTime() < y.getStartTime()) {
@@ -50,11 +51,11 @@ public class StateSystemSegmentStore implements ISegmentStore<ISegment> {
      * Constructor
      *
      * @param ss
-     * @param quarks
+     * @param quarkToDisk
      */
-    public StateSystemSegmentStore(ITmfStateSystem ss, List<Integer> quarks) {
+    public StateSystemSegmentStore(ITmfStateSystem ss, Map<Integer, Disk> quarkToDisk) {
         fStateSystem = ss;
-        fSegmentQuarks = quarks;
+        fSegmentQuarks = quarkToDisk;
     }
 
     @Override
@@ -104,7 +105,7 @@ public class StateSystemSegmentStore implements ISegmentStore<ISegment> {
             long startTime = fStateSystem.getStartTime();
             Iterator<ITmfStateInterval> iterator = null;
             try {
-                Iterable<ITmfStateInterval> query2d = fStateSystem.query2D(fSegmentQuarks, startTime, fEndTime);
+                Iterable<ITmfStateInterval> query2d = fStateSystem.query2D(fSegmentQuarks.keySet(), startTime, fEndTime);
                 iterator = query2d.iterator();
             } catch (IndexOutOfBoundsException | TimeRangeException | StateSystemDisposedException e) {
                 iterator = null;
@@ -124,7 +125,7 @@ public class StateSystemSegmentStore implements ISegmentStore<ISegment> {
             }
             while (iterator.hasNext() && nextSegment == null) {
                 ITmfStateInterval next = iterator.next();
-                nextSegment = RequestIntervalSegment.create(next);
+                nextSegment = RequestIntervalSegment.create(next, fSegmentQuarks.get(next.getAttribute()));
             }
             fSegment = nextSegment;
             return fSegment != null;
@@ -190,8 +191,8 @@ public class StateSystemSegmentStore implements ISegmentStore<ISegment> {
         }
         List<@NonNull ISegment> segments = new ArrayList<>();
         try {
-            for (ITmfStateInterval interval : fStateSystem.query2D(fSegmentQuarks, startTime, endTime)) {
-                RequestIntervalSegment segment = RequestIntervalSegment.create(interval);
+            for (ITmfStateInterval interval : fStateSystem.query2D(fSegmentQuarks.keySet(), startTime, endTime)) {
+                RequestIntervalSegment segment = RequestIntervalSegment.create(interval, fSegmentQuarks.get(interval.getAttribute()));
                 if (segment != null) {
                     segments.add(segment);
                 }

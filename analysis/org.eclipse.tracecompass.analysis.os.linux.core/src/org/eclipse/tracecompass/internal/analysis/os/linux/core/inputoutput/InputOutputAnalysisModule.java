@@ -15,7 +15,6 @@ import static org.eclipse.tracecompass.common.core.NonNullUtils.checkNotNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -60,8 +59,6 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule impl
     /** The ID of this analysis module */
     public static final String ID = "org.eclipse.tracecompass.analysis.os.linux.inputoutput"; //$NON-NLS-1$
     private final Collection<ISegmentAspect> fAspects = ImmutableList.of(new IoDiskAspect(), IoRequestTypeAspect.INSTANCE);
-
-    private Map<Integer, Disk> fQuarkToDisk = Collections.emptyMap();
 
     @Override
     protected ITmfStateProvider createStateProvider() {
@@ -171,10 +168,7 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule impl
         @Override
         public @Nullable Object resolve(ISegment segment) {
             if (segment instanceof RequestIntervalSegment) {
-                Disk disk = fQuarkToDisk.get(((RequestIntervalSegment) segment).getAttribute());
-                if (disk != null) {
-                    return disk.getDiskName();
-                }
+                return ((RequestIntervalSegment) segment).getDiskName();
             }
             return EMPTY_STRING;
         }
@@ -233,7 +227,6 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule impl
             return null;
         }
         Collection<Disk> disks = InputOutputInformationProvider.getDisks(this);
-        List<Integer> segmentQuarks = new ArrayList<>();
         Map<Integer, Disk> quarkToDisk = new HashMap<>();
         for (Disk disk : disks) {
             int wqQuark = ss.optQuarkRelative(disk.getQuark(), Attributes.WAITING_QUEUE);
@@ -244,11 +237,9 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule impl
             for (Integer subAttribute : subAttributes) {
                 quarkToDisk.put(subAttribute, disk);
             }
-            segmentQuarks.addAll(subAttributes);
         }
-        fQuarkToDisk = quarkToDisk;
 
-        return new StateSystemSegmentStore(ss, segmentQuarks);
+        return new StateSystemSegmentStore(ss, quarkToDisk);
     }
 
 }

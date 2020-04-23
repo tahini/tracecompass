@@ -12,12 +12,13 @@ package org.eclipse.tracecompass.internal.analysis.os.linux.core.inputoutput;
 import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.segmentstore.core.ISegment;
+import org.eclipse.tracecompass.segmentstore.core.segment.interfaces.INamedSegment;
 import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;
 
 /**
  * @since 2.0
  */
-public class RequestIntervalSegment implements ISegment {
+public class RequestIntervalSegment implements INamedSegment {
 
     /**
      *
@@ -25,6 +26,7 @@ public class RequestIntervalSegment implements ISegment {
     private static final long serialVersionUID = 3064409294604514508L;
     private final ITmfStateInterval fInterval;
     private final IoOperationType fType;
+    private final String fDiskName;
 
     /**
      * Create a request segment from an interval
@@ -32,19 +34,21 @@ public class RequestIntervalSegment implements ISegment {
      * @param interval
      *            The base interval for this request, whose value contains the
      *            type of disk request
+     * @param disk
      * @return The new request or null if the interval does not contain a value
      */
-    public static @Nullable RequestIntervalSegment create(ITmfStateInterval interval) {
+    public static @Nullable RequestIntervalSegment create(ITmfStateInterval interval, @Nullable Disk disk) {
         Object value = interval.getValue();
         if (value instanceof Integer) {
-            return new RequestIntervalSegment(interval, IoOperationType.fromNumber((Integer) value));
+            return new RequestIntervalSegment(interval, IoOperationType.fromNumber((Integer) value), disk);
         }
         return null;
     }
 
-    private RequestIntervalSegment(ITmfStateInterval interval, IoOperationType ioOperationType) {
+    private RequestIntervalSegment(ITmfStateInterval interval, IoOperationType ioOperationType, @Nullable Disk disk) {
         fInterval = interval;
         fType = ioOperationType;
+        fDiskName = disk != null ? disk.getDiskName() : ""; //$NON-NLS-1$
     }
 
     @Override
@@ -65,6 +69,11 @@ public class RequestIntervalSegment implements ISegment {
         return fInterval.getEndTime() + 1;
     }
 
+    @Override
+    public String getName() {
+        return fDiskName.isEmpty() ? String.valueOf(fType) : fDiskName + ' ' + ':' + ' ' + String.valueOf(fType);
+    }
+
     /**
      * Get the type of this request operation
      *
@@ -74,8 +83,13 @@ public class RequestIntervalSegment implements ISegment {
         return fType;
     }
 
-    public Integer getAttribute() {
-        return fInterval.getAttribute();
+    /**
+     * Get the name of the disk
+     *
+     * @return The name of the disk
+     */
+    public @Nullable String getDiskName() {
+        return fDiskName;
     }
 
 }
