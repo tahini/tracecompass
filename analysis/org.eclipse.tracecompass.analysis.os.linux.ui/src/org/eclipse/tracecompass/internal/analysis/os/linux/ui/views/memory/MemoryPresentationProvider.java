@@ -16,9 +16,9 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.eclipse.jdt.annotation.NonNull;
+import org.eclipse.tracecompass.internal.provisional.tmf.ui.widgets.timegraph.BaseXYPresentationProvider;
 import org.eclipse.tracecompass.tmf.core.model.OutputElementStyle;
 import org.eclipse.tracecompass.tmf.core.presentation.IYAppearance;
-import org.eclipse.tracecompass.tmf.core.presentation.XYPresentationProvider;
 import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
 
 /**
@@ -30,7 +30,7 @@ import org.eclipse.tracecompass.tmf.core.trace.ITmfTrace;
  *
  * @author Geneviève Bastien
  */
-public class MemoryPresentationProvider extends XYPresentationProvider {
+public class MemoryPresentationProvider extends BaseXYPresentationProvider {
 
     private static final int DEFAULT_SERIES_WIDTH = 1;
     private static final int THICK_SERIES = 2;
