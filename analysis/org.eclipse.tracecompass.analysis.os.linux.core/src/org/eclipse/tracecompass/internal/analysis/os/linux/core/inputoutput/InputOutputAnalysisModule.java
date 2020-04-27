@@ -54,11 +54,14 @@ import com.google.common.collect.ImmutableList;
  *
  * @author Houssem Daoud
  */
-public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule implements ISegmentStoreProvider {
+public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule {
 
     /** The ID of this analysis module */
     public static final String ID = "org.eclipse.tracecompass.analysis.os.linux.inputoutput"; //$NON-NLS-1$
     private final Collection<ISegmentAspect> fAspects = ImmutableList.of(new IoDiskAspect(), IoRequestTypeAspect.INSTANCE);
+
+    private final ISegmentStoreProvider fWaitingQueueSs = new InputOutputSegmentStore(Attributes.WAITING_QUEUE);
+    private final ISegmentStoreProvider fExecQueueSs = new InputOutputSegmentStore(Attributes.DRIVER_QUEUE);
 
     @Override
     protected ITmfStateProvider createStateProvider() {
@@ -109,7 +112,8 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule impl
      * @return table of latencies
      */
     public ArrayList<Long> getLatencyTables(long start, long end) {
-        @NonNull ArrayList<@NonNull Long> map = new ArrayList<>();
+        @NonNull
+        ArrayList<@NonNull Long> map = new ArrayList<>();
         ITmfTrace trace = getTrace();
         ITmfStateSystem ss = getStateSystem();
         if (trace == null || ss == null) {
@@ -205,41 +209,70 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule impl
         }
     }
 
-    @Override
-    public void addListener(@NonNull IAnalysisProgressListener listener) {
+    private class InputOutputSegmentStore implements ISegmentStoreProvider {
 
-    }
+        private final String fQueueAttribute;
 
-    @Override
-    public void removeListener(@NonNull IAnalysisProgressListener listener) {
-
-    }
-
-    @Override
-    public Iterable<ISegmentAspect> getSegmentAspects() {
-        return fAspects;
-    }
-
-    @Override
-    public @Nullable ISegmentStore<@NonNull ISegment> getSegmentStore() {
-        ITmfStateSystem ss = getStateSystem();
-        if (ss == null) {
-            return null;
-        }
-        Collection<Disk> disks = InputOutputInformationProvider.getDisks(this);
-        Map<Integer, Disk> quarkToDisk = new HashMap<>();
-        for (Disk disk : disks) {
-            int wqQuark = ss.optQuarkRelative(disk.getQuark(), Attributes.WAITING_QUEUE);
-            if (wqQuark == ITmfStateSystem.INVALID_ATTRIBUTE) {
-                continue;
-            }
-            List<Integer> subAttributes = ss.getSubAttributes(wqQuark, false);
-            for (Integer subAttribute : subAttributes) {
-                quarkToDisk.put(subAttribute, disk);
-            }
+        public InputOutputSegmentStore(String queueAttribute) {
+            fQueueAttribute = queueAttribute;
         }
 
-        return new StateSystemSegmentStore(ss, quarkToDisk);
+        @Override
+        public void addListener(@NonNull IAnalysisProgressListener listener) {
+
+        }
+
+        @Override
+        public void removeListener(@NonNull IAnalysisProgressListener listener) {
+
+        }
+
+        @Override
+        public Iterable<ISegmentAspect> getSegmentAspects() {
+            return fAspects;
+        }
+
+        @Override
+        public @Nullable ISegmentStore<ISegment> getSegmentStore() {
+            ITmfStateSystem ss = getStateSystem();
+            if (ss == null) {
+                schedule();
+                return null;
+            }
+            Collection<Disk> disks = InputOutputInformationProvider.getDisks(InputOutputAnalysisModule.this);
+            Map<Integer, Disk> quarkToDisk = new HashMap<>();
+            for (Disk disk : disks) {
+                int wqQuark = ss.optQuarkRelative(disk.getQuark(), fQueueAttribute);
+                if (wqQuark == ITmfStateSystem.INVALID_ATTRIBUTE) {
+                    continue;
+                }
+                List<Integer> subAttributes = ss.getSubAttributes(wqQuark, false);
+                for (Integer subAttribute : subAttributes) {
+                    quarkToDisk.put(subAttribute, disk);
+                }
+            }
+
+            return new StateSystemSegmentStore(ss, quarkToDisk);
+        }
+
+    }
+
+    /**
+     * Get the waiting queue segment store
+     *
+     * @return The waiting queue segment store
+     */
+    public ISegmentStoreProvider getWaitingQueueSegmentStore() {
+        return fWaitingQueueSs;
+    }
+
+    /**
+     * Get the exec queue segment store
+     *
+     * @return The exec queue segment store
+     */
+    public ISegmentStoreProvider getExecutionQueueSegmentStore() {
+        return fExecQueueSs;
     }
 
 }
