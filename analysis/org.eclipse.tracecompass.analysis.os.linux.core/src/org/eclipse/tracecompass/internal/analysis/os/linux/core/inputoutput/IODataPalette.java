@@ -11,9 +11,7 @@
 package org.eclipse.tracecompass.internal.analysis.os.linux.core.inputoutput;
 
 import java.util.List;
-import java.util.Objects;
 
-import org.eclipse.tracecompass.tmf.core.dataprovider.X11ColorUtils;
 import org.eclipse.tracecompass.tmf.core.util.Pair;
 
 import com.google.common.collect.ImmutableList;
@@ -21,6 +19,10 @@ import com.google.common.collect.ImmutableList;
 /**
  * A class who provides various color pairs for read/write data. Reads have a
  * blueish tint, while the writes are reddish.
+ *
+ * Those colors are taken from the {@href https://colorbrewer2.org} from
+ * sequential palettes of blues and reds with 6 colors, eliminating the first
+ * paler one
  *
  * @author Geneviève Bastien
  */
@@ -31,21 +33,26 @@ public class IODataPalette {
     static {
         ImmutableList.Builder<Pair<String, String>> colorBuilder = new ImmutableList.Builder<>();
 
+        // Middle color
         colorBuilder.add(new Pair<>(
-                Objects.requireNonNull(X11ColorUtils.toHexColor("blue")), //$NON-NLS-1$
-                Objects.requireNonNull(X11ColorUtils.toHexColor("red")))); //$NON-NLS-1$
+                "#6baed6", //$NON-NLS-1$
+                "#fb6a4a")); //$NON-NLS-1$
+        // Paler
         colorBuilder.add(new Pair<>(
-                Objects.requireNonNull(X11ColorUtils.toHexColor("cyan")), //$NON-NLS-1$
-                Objects.requireNonNull(X11ColorUtils.toHexColor("orange red")))); //$NON-NLS-1$
+                "#eff3ff", //$NON-NLS-1$
+                "#fee5d9")); //$NON-NLS-1$
+        // Darker
         colorBuilder.add(new Pair<>(
-                Objects.requireNonNull(X11ColorUtils.toHexColor("deep sky blue")), //$NON-NLS-1$
-                Objects.requireNonNull(X11ColorUtils.toHexColor("firebrick")))); //$NON-NLS-1$
+                "#08519c", //$NON-NLS-1$
+                "#a50f15")); //$NON-NLS-1$
+        // Between paler and middle
         colorBuilder.add(new Pair<>(
-                Objects.requireNonNull(X11ColorUtils.toHexColor("navy blue")), //$NON-NLS-1$
-                Objects.requireNonNull(X11ColorUtils.toHexColor("web maroon")))); //$NON-NLS-1$
+                "#bdd7e7", //$NON-NLS-1$
+                "#fcae91")); //$NON-NLS-1$
+        // Between middle and darker
         colorBuilder.add(new Pair<>(
-                Objects.requireNonNull(X11ColorUtils.toHexColor("pale turquoise")), //$NON-NLS-1$
-                Objects.requireNonNull(X11ColorUtils.toHexColor("orange")))); //$NON-NLS-1$
+                "#3182bd", //$NON-NLS-1$
+                "#de2d26")); //$NON-NLS-1$
         COLOR_LIST = colorBuilder.build();
     }
 
