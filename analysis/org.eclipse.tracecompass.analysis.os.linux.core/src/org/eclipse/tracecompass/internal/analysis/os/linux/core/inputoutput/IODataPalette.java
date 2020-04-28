@@ -37,22 +37,23 @@ public class IODataPalette {
         colorBuilder.add(new Pair<>(
                 "#6baed6", //$NON-NLS-1$
                 "#fb6a4a")); //$NON-NLS-1$
-        // Paler
-        colorBuilder.add(new Pair<>(
-                "#eff3ff", //$NON-NLS-1$
-                "#fee5d9")); //$NON-NLS-1$
         // Darker
         colorBuilder.add(new Pair<>(
                 "#08519c", //$NON-NLS-1$
                 "#a50f15")); //$NON-NLS-1$
-        // Between paler and middle
+        // Paler
         colorBuilder.add(new Pair<>(
-                "#bdd7e7", //$NON-NLS-1$
-                "#fcae91")); //$NON-NLS-1$
+                "#c6dbef", //$NON-NLS-1$
+                "#fcbba1")); //$NON-NLS-1$
         // Between middle and darker
         colorBuilder.add(new Pair<>(
                 "#3182bd", //$NON-NLS-1$
                 "#de2d26")); //$NON-NLS-1$
+        // Between paler and middle
+        colorBuilder.add(new Pair<>(
+                "#9ecae1", //$NON-NLS-1$
+                "#fc9272")); //$NON-NLS-1$
+
         COLOR_LIST = colorBuilder.build();
     }
 
