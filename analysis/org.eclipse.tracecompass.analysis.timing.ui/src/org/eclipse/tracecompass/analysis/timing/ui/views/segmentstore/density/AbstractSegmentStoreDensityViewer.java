@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.eclipse.jdt.annotation.Nullable;
@@ -177,7 +178,26 @@ public abstract class AbstractSegmentStoreDensityViewer extends TmfViewer implem
         }
     }
 
+    /**
+     * Get a function that maps a segment to a sub-series name. Sub-series will
+     * be stacked and a legend will show their names. Useful for segment store
+     * with a small number of different types of data that can be grouped
+     * together
+     *
+     * @return A mapper to a sub-series name, or <code>null</code> if there are
+     *         no sub-series
+     * @since 4.1
+     */
+    protected @Nullable Function<ISegment, String> getSubSeriesFunction() {
+        return null;
+    }
+
     private synchronized void updateDisplay(String name, SegmentStoreWithRange<ISegment> data) {
+        Function<ISegment, String> subSeriesFunction = getSubSeriesFunction();
+        if (subSeriesFunction != null && fSeriesType.equals(Type.BAR)) {
+            updateWithStackedSeries(data, subSeriesFunction);
+            return;
+        }
         ISeries series = fSeriesType.equals(Type.BAR) ? createSeries() : createAreaSeries(name);
         int barWidth = 4;
         int preWidth = fOverrideNbPoints == 0 ? fChart.getPlotArea().getBounds().width / barWidth : fOverrideNbPoints;
@@ -187,6 +207,7 @@ public abstract class AbstractSegmentStoreDensityViewer extends TmfViewer implem
         final int width = preWidth;
         double[] xOrigSeries = new double[width];
         double[] yOrigSeries = new double[width];
+
         // Set a positive value that is greater than 0 and less than 1.0
         Arrays.fill(yOrigSeries, Double.MIN_VALUE);
         data.setComparator(SegmentComparators.INTERVAL_LENGTH_COMPARATOR);
@@ -268,11 +289,119 @@ public abstract class AbstractSegmentStoreDensityViewer extends TmfViewer implem
 
     }
 
+    private void updateWithStackedSeries(SegmentStoreWithRange<ISegment> data, Function<ISegment, String> subSeriesFunction) {
+        int barWidth = 4;
+        int preWidth = fOverrideNbPoints == 0 ? fChart.getPlotArea().getBounds().width / barWidth : fOverrideNbPoints;
+        if (!fSeriesType.equals(Type.BAR)) {
+            preWidth += 2;
+        }
+        final int width = preWidth;
+        double[] xOrigSeries = new double[width];
+
+        // Set a positive value that is greater than 0 and less than 1.0
+        data.setComparator(SegmentComparators.INTERVAL_LENGTH_COMPARATOR);
+        ISegment maxSegment = data.getElement(SegmentStoreWithRange.LAST);
+        long maxLength = Long.MAX_VALUE;
+        if (maxSegment != null) {
+            maxLength = maxSegment.getLength();
+        } else {
+            maxLength = Long.MIN_VALUE;
+            for (ISegment segment : data) {
+                maxLength = Math.max(maxLength, segment.getLength());
+            }
+            if (maxLength == Long.MIN_VALUE) {
+                maxLength = 1;
+            }
+        }
+        double maxFactor = 1.0 / (maxLength + 1.0);
+        long minX = Long.MAX_VALUE;
+        Map<String, double[]> seriesData = new HashMap<>();
+        for (ISegment segment : data) {
+            String subSeries = subSeriesFunction.apply(segment);
+            double[] yOrigSeries = seriesData.computeIfAbsent(subSeries, s -> {
+                double[] ySeries = new double[width];
+                Arrays.fill(ySeries, Double.MIN_VALUE);
+                return ySeries;
+            });
+            double xBox = segment.getLength() * maxFactor * width;
+            if (yOrigSeries[(int) xBox] < 1) {
+                yOrigSeries[(int) xBox] = 1;
+            } else {
+                yOrigSeries[(int) xBox]++;
+            }
+            minX = Math.min(minX, segment.getLength());
+        }
+        double timeWidth = (double) maxLength / (double) width;
+        for (int i = 0; i < width; i++) {
+            xOrigSeries[i] = i * timeWidth;
+            if (!fSeriesType.equals(Type.BAR)) {
+                xOrigSeries[i] += timeWidth / 2;
+            }
+        }
+
+        if (minX == maxLength) {
+            maxLength++;
+            minX--;
+        }
+        // Create the series
+        for (Entry<String, double[]> entry : seriesData.entrySet()) {
+            ISeries series = createSeries(entry.getKey());
+            series.setXSeries(xOrigSeries);
+            series.setYSeries(entry.getValue());
+        }
+
+        final IAxis xAxis = fChart.getAxisSet().getXAxis(0);
+        /*
+         * adjustrange appears to bring origin back since we pad the series with
+         * 0s, not interesting.
+         */
+        Range currentDurationRange = fCurrentDurationRange;
+        if (Double.isFinite(currentDurationRange.lower) && Double.isFinite(currentDurationRange.upper)) {
+            xAxis.setRange(currentDurationRange);
+        } else {
+            xAxis.adjustRange();
+        }
+
+        xAxis.getTick().setFormat(DENSITY_TIME_FORMATTER);
+        ILegend legend = fChart.getLegend();
+        legend.setVisible(true);
+        legend.setPosition(SWT.BOTTOM);
+        /*
+         * Clamp range lower to 0.9 to make it log, 0.1 would be scientifically
+         * accurate, but we cannot have partial counts.
+         */
+        double maxY = Double.NEGATIVE_INFINITY;
+        for (ISeries internalSeries : fChart.getSeriesSet().getSeries()) {
+            double[] ySeries = internalSeries.getYSeries();
+            for (int i = 0; i < ySeries.length; i++) {
+                maxY = Math.max(maxY, ySeries[i]);
+            }
+        }
+        fChart.getAxisSet().getYAxis(0).setRange(new Range(0.9, Math.max(1.0, maxY)));
+        fChart.getAxisSet().getYAxis(0).enableLogScale(true);
+        fChart.redraw();
+        new Thread(() -> {
+            for (ISegmentStoreDensityViewerDataListener l : fListeners) {
+                l.chartUpdated();
+            }
+        }).start();
+    }
+
     private ISeries createSeries() {
         IBarSeries series = (IBarSeries) fChart.getSeriesSet().createSeries(SeriesType.BAR, Messages.AbstractSegmentStoreDensityViewer_SeriesLabel);
         series.setVisible(true);
         series.setBarPadding(0);
         series.setBarColor(getColorForRGB(BAR_COLOR));
+        return series;
+    }
+
+    private ISeries createSeries(String name) {
+        IBarSeries series = (IBarSeries) fChart.getSeriesSet().createSeries(SeriesType.BAR, name);
+        series.setVisible(true);
+        series.setBarPadding(0);
+        RGB rgb = getColorForItem(name);
+        Color color = getColorForRGB(rgb);
+        series.setBarColor(color);
         return series;
     }
 
@@ -307,9 +436,9 @@ public abstract class AbstractSegmentStoreDensityViewer extends TmfViewer implem
      * @since 4.1
      */
     public RGB getColorForItem(String name) {
-        if (fSegmentStoreProvider.size() == 1) {
-            return BAR_COLOR;
-        }
+//        if (fSegmentStoreProvider.size() == 1) {
+//            return BAR_COLOR;
+//        }
         Set<String> keys = fSegmentStoreProvider.keySet();
         int i = 0;
         for (String key : keys) {
@@ -317,6 +446,10 @@ public abstract class AbstractSegmentStoreDensityViewer extends TmfViewer implem
                 break;
             }
             i++;
+        }
+        if (!keys.contains(name)) {
+            int index = Math.abs(name.hashCode() % PALETTE.getNbColors());
+            return Objects.requireNonNull(RGBAUtil.fromRGBAColor(PALETTE.get().get(index)).rgb);
         }
         float pos = (float) i / keys.size();
         int index = Math.max((int) (PALETTE.getNbColors() * pos), 0) % PALETTE.getNbColors();
