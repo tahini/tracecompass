@@ -189,6 +189,13 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
 
         int i = 0;
         for (Integer diskQuark : ss.getQuarks(Attributes.DISKS, "*")) { //$NON-NLS-1$
+            // Do not add this disk/partition if there was no read/write
+            int readQuark = ss.optQuarkRelative(diskQuark, Attributes.SECTORS_READ);
+            int writeQuark = ss.optQuarkRelative(diskQuark, Attributes.SECTORS_WRITTEN);
+            if (readQuark == ITmfStateSystem.INVALID_ATTRIBUTE && writeQuark == ITmfStateSystem.INVALID_ATTRIBUTE) {
+                continue;
+            }
+
             String diskName = DiskUtils.getDiskName(ss, diskQuark);
             long diskId = getId(diskQuark);
             nodes.add(new TmfTreeDataModel(diskId, rootId, Collections.singletonList(diskName), false, null));
@@ -197,7 +204,6 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
             Pair<String, String> pair = COLOR_LIST.get(i % COLOR_LIST.size());
             String seriesStyle = SUPPORTED_STYLES.get((i / COLOR_LIST.size()) % SUPPORTED_STYLES.size());
 
-            int readQuark = ss.optQuarkRelative(diskQuark, Attributes.SECTORS_READ);
             if (readQuark != ITmfStateSystem.INVALID_ATTRIBUTE) {
                 nodes.add(new TmfTreeDataModel(getId(readQuark), diskId, Collections.singletonList(readName), true,
                         new OutputElementStyle(BASE_STYLE, ImmutableMap.of(
@@ -206,7 +212,6 @@ public class DisksIODataProvider extends AbstractTreeCommonXDataProvider<InputOu
                                 StyleProperties.STYLE_NAME, diskName + '/' + readName))));
             }
 
-            int writeQuark = ss.optQuarkRelative(diskQuark, Attributes.SECTORS_WRITTEN);
             if (writeQuark != ITmfStateSystem.INVALID_ATTRIBUTE) {
                 nodes.add(new TmfTreeDataModel(getId(writeQuark), diskId, Collections.singletonList(writeName), true,
                         new OutputElementStyle(BASE_STYLE, ImmutableMap.of(
