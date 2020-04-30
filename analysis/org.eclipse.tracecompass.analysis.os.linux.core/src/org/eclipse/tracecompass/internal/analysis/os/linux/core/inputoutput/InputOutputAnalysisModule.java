@@ -239,6 +239,9 @@ public class InputOutputAnalysisModule extends TmfStateSystemAnalysisModule {
                 schedule();
                 return null;
             }
+            if (!InputOutputAnalysisModule.this.waitForCompletion()) {
+                return null;
+            }
             Collection<Disk> disks = InputOutputInformationProvider.getDisks(InputOutputAnalysisModule.this);
             Map<Integer, Disk> quarkToDisk = new HashMap<>();
             for (Disk disk : disks) {
