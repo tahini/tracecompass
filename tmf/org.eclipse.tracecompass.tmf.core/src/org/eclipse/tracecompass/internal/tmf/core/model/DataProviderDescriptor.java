@@ -31,6 +31,7 @@ public class DataProviderDescriptor implements IDataProviderDescriptor {
     private final String fName;
     private final String fDescription;
     private final ProviderType fType;
+    private final @Nullable DataType fDataType;
 
     /**
      * Constructor
@@ -43,6 +44,7 @@ public class DataProviderDescriptor implements IDataProviderDescriptor {
         fName = builder.fName;
         fDescription = builder.fDescription;
         fType = Objects.requireNonNull(builder.fType);
+        fDataType = builder.fDataType;
     }
 
     @Override
@@ -63,6 +65,11 @@ public class DataProviderDescriptor implements IDataProviderDescriptor {
     @Override
     public String getDescription() {
         return fDescription;
+    }
+
+    @Override
+    public @Nullable DataType getDataType() {
+        return fDataType;
     }
 
     @Override
@@ -88,6 +95,7 @@ public class DataProviderDescriptor implements IDataProviderDescriptor {
         private String fName = ""; //$NON-NLS-1$
         private String fDescription = ""; //$NON-NLS-1$
         private @Nullable ProviderType fType = null;
+        private @Nullable DataType fDataType = null;
 
         /**
          * Constructor
@@ -145,6 +153,18 @@ public class DataProviderDescriptor implements IDataProviderDescriptor {
         }
 
         /**
+         * Sets the data type for this provider
+         *
+         * @param dataType
+         *            The data type to set
+         * @return the builder instance
+         */
+        public Builder setDataType(DataType dataType) {
+            fDataType = dataType;
+            return this;
+        }
+
+        /**
          * The method to construct an instance of
          * {@link IDataProviderDescriptor}
          *
@@ -159,6 +179,5 @@ public class DataProviderDescriptor implements IDataProviderDescriptor {
             }
             return new DataProviderDescriptor(this);
         }
-
     }
 }
