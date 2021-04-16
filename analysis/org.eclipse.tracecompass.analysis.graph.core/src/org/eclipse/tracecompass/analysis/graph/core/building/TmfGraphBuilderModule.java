@@ -105,6 +105,7 @@ public abstract class TmfGraphBuilderModule extends TmfAbstractAnalysisModule im
     public void dispose() {
         fCriticalPathModule.dispose();
         super.dispose();
+        fGraph = null;
     }
 
     // ------------------------------------------------------------------------
