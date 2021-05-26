@@ -14,6 +14,7 @@
 
 package org.eclipse.tracecompass.analysis.graph.core.base;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +26,7 @@ import org.eclipse.jdt.annotation.NonNull;
  *
  * @author Geneviève Bastien
  */
-public interface IGraphWorker {
+public interface IGraphWorker extends Serializable {
 
     /**
      * Get the host ID of the trace this worker belongs to

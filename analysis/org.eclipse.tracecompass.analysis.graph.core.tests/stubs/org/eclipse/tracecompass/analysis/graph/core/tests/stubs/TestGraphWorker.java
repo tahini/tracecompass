@@ -24,6 +24,10 @@ import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
  */
 public class TestGraphWorker implements IGraphWorker {
 
+    /**
+     *
+     */
+    private static final long serialVersionUID = 57296787802835537L;
     private final Integer fValue;
 
     /**
@@ -33,6 +37,11 @@ public class TestGraphWorker implements IGraphWorker {
      */
     public TestGraphWorker(final Integer i) {
         fValue = i;
+    }
+
+    public TestGraphWorker() {
+        fValue = 0;
+        System.out.println("Default constructor called");
     }
 
     @Override

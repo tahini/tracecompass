@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraphOnDisk.WorkerSerializer;
 
 /**
  * @author Geneviève Bastien
@@ -26,10 +27,11 @@ public class TmfGraphFactory {
     /**
      *
      *
+     * @param testWorkerSerializer
      * @return
      */
-    public static @Nullable ITmfGraph createGraphOnDisk(String id, File htFile, Path segmentFile) {
-        TmfGraphOnDisk graph = new TmfGraphOnDisk();
+    public static @Nullable ITmfGraph createGraphOnDisk(String id, File htFile, Path segmentFile, WorkerSerializer workerSerializer) {
+        TmfGraphOnDisk graph = new TmfGraphOnDisk(workerSerializer);
         try {
             graph.init(id, htFile, segmentFile);
         } catch (IOException e) {

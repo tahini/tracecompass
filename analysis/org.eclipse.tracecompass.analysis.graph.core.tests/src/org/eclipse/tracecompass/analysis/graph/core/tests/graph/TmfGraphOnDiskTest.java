@@ -19,11 +19,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNull;
@@ -32,6 +38,7 @@ import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge.EdgeType;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfGraph;
 import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraph;
 import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraphFactory;
+import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraphOnDisk.WorkerSerializer;
 import org.eclipse.tracecompass.analysis.graph.core.tests.stubs.TestGraphWorker;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
@@ -58,17 +65,52 @@ public class TmfGraphOnDiskTest {
 
     private Path fGraphFile;
     private Path fGraphSegmentFile;
+    private Path fGraphWorkerFiler;
+
+    public class TestWorkerSerializer implements WorkerSerializer {
+
+        @Override
+        public void serialize(@NonNull Map<@NonNull IGraphWorker, @NonNull Integer> workerAttrib) {
+            // Serialize the graph worker hash map, close state system and segment store
+            try (FileOutputStream fos = new FileOutputStream(fGraphWorkerFiler.toString());
+                    ObjectOutputStream oos = new ObjectOutputStream(fos);) {
+                oos.writeObject(workerAttrib);
+
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+            }
+        }
+
+        @Override
+        public @NonNull Map<@NonNull IGraphWorker, @NonNull Integer> deserialize() {
+            try (FileInputStream fis = new FileInputStream(fGraphWorkerFiler.toString());
+                    ObjectInputStream ois = new ObjectInputStream(fis);) {
+
+                return (Map) ois.readObject();
+            } catch (IOException ioe) {
+                ioe.printStackTrace();
+                return new HashMap<>();
+            } catch (ClassNotFoundException c) {
+                System.out.println("Class not found");
+                c.printStackTrace();
+                return new HashMap<>();
+            }
+        }
+
+    }
 
     @Before
     public void createFile() throws IOException {
         fGraphFile = Files.createTempFile("tmpGraph", ".ht");
         fGraphSegmentFile = Files.createTempFile("tmpGraph", ".seg");
+        fGraphWorkerFiler = Files.createTempFile("tmpGraph", ".workers");
     }
 
     @After
     public void deleteFiles() throws IOException {
         Files.deleteIfExists(fGraphFile);
         Files.deleteIfExists(fGraphSegmentFile);
+        Files.deleteIfExists(fGraphWorkerFiler);
     }
 
     /**
@@ -76,7 +118,7 @@ public class TmfGraphOnDiskTest {
      */
     @Test
     public void testDefaultConstructor() {
-        ITmfGraph g = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph g = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         assertEquals(0, g.size());
     }
 
@@ -88,7 +130,7 @@ public class TmfGraphOnDiskTest {
     public void testAddVertex() {
 
         // Add vertices for a single worker covering the entire graph.
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         TmfVertex v0 = graph.createVertex(WORKER1, 0);
         graph.add(v0);
         TmfVertex v1 = graph.createVertex(WORKER1, 1);
@@ -146,7 +188,7 @@ public class TmfGraphOnDiskTest {
     public void testAppendVertex() {
 
         // Add vertices for a single worker covering the entire graph.
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         TmfVertex v0 = graph.createVertex(WORKER1, 0);
         TmfEdge edge = graph.append(v0);
         assertNull("First edge of a worker", edge);
@@ -184,7 +226,7 @@ public class TmfGraphOnDiskTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void testIllegalVertex() {
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         TmfVertex v0 = graph.createVertex(WORKER1, 0);
         TmfVertex v1 = graph.createVertex(WORKER1, 1);
         graph.add(v1);
@@ -198,7 +240,7 @@ public class TmfGraphOnDiskTest {
     @Test
     public void testLink() {
         // Start with a first node
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         TmfVertex v0 = graph.createVertex(WORKER1, 0);
         graph.add(v0);
         TmfVertex v1 = graph.createVertex(WORKER1, 1);
@@ -311,7 +353,7 @@ public class TmfGraphOnDiskTest {
     @Test
     public void testReReadGraph() {
         // Start with a first node
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         TmfVertex v0 = graph.createVertex(WORKER1, 0);
         graph.add(v0);
         TmfVertex v1 = graph.createVertex(WORKER1, 1);
@@ -331,7 +373,7 @@ public class TmfGraphOnDiskTest {
         graph.closeGraph(3);
         graph = null;
 
-        ITmfGraph reOpenedGraph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile));
+        ITmfGraph reOpenedGraph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         // Assert the number of nodes per worker
         Iterator<TmfVertex> it = reOpenedGraph.getNodesOf(WORKER1);
         assertEquals(3, ImmutableList.copyOf(it).size());

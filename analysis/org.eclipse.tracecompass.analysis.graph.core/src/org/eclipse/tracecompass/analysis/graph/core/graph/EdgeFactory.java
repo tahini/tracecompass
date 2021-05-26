@@ -34,7 +34,10 @@ public class EdgeFactory {
             return null;
         }
         TmfEdge edge = new TmfEdge(new TmfVertex(interval.getStartTime(), interval.getAttribute()), new TmfVertex(interval.getEndTime() + 1, interval.getAttribute()));
-        edge.setEdgeType((EdgeType) interval.getValue());
+        Object value = interval.getValue();
+        if (value instanceof Integer) {
+            edge.setEdgeType(EdgeType.values()[(Integer) value]);
+        }
         return edge;
     }
 

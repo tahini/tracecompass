@@ -57,10 +57,16 @@ public class TmfGraphOnDisk implements ITmfGraph {
     // Maps a state system attribute to the timestamp of the latest vertex
     private Map<Integer, Long> fCurrentWorkerLatestTime = new HashMap<>();
     private Integer fCount = 0;
+    private final WorkerSerializer fWorkerSerializer;
+
+    public interface WorkerSerializer {
+        void serialize(Map<IGraphWorker, Integer> workerAttrib);
+        Map<IGraphWorker, Integer> deserialize();
+    }
 
 
-    public TmfGraphOnDisk() {
-
+    public TmfGraphOnDisk(WorkerSerializer workerSerializer) {
+        fWorkerSerializer = workerSerializer;
     }
 
     public void init(String id, File htFile, Path segmentFile) throws IOException {
@@ -96,6 +102,8 @@ public class TmfGraphOnDisk implements ITmfGraph {
         ISegmentStore<ISegment> segStore = SegmentStoreFactory.createOnDiskSegmentStore(segmentFile, VerticalEdgeSegment.EDGE_STATE_VALUE_FACTORY, VERSION);
         fSegStore = segStore;
 
+        fWorkerAttrib = fWorkerSerializer.deserialize();
+
     }
 
     public ITmfStateSystemBuilder getStateSystem() {
@@ -127,9 +135,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
         int attribute = vertex.getAttribute();
         Object currentEdge = ss.queryOngoing(attribute);
         if (currentEdge != null) {
-            ss.updateOngoingState(EdgeType.NO_EDGE, attribute);
+            ss.updateOngoingState(EdgeType.NO_EDGE.ordinal(), attribute);
         }
-        ss.modifyAttribute(vertex.getTs(), EdgeType.EPS, attribute);
+        ss.modifyAttribute(vertex.getTs(), EdgeType.EPS.ordinal(), attribute);
         fCurrentWorkerLatestTime.put(attribute, vertex.getTs());
     }
 
@@ -145,9 +153,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
         int attribute = vertex.getAttribute();
         Object currentEdge = ss.queryOngoing(attribute);
         if (currentEdge != null) {
-            ss.updateOngoingState(type, attribute);
+            ss.updateOngoingState(type.ordinal(), attribute);
         }
-        ss.modifyAttribute(vertex.getTs(), EdgeType.EPS, attribute);
+        ss.modifyAttribute(vertex.getTs(), EdgeType.EPS.ordinal(), attribute);
         fCurrentWorkerLatestTime.put(attribute, vertex.getTs());
         try {
             return vertex.getTs() == ss.getStartTime() || currentEdge == null ? null : EdgeFactory.createEdge(ss.querySingleState(vertex.getTs() - 1, attribute));
@@ -163,9 +171,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
         int attribute = vertex.getAttribute();
         Object currentEdge = ss.queryOngoing(attribute);
         if (currentEdge != null) {
-            ss.updateOngoingState(type, attribute);
+            ss.updateOngoingState(type.ordinal(), attribute);
         }
-        ss.modifyAttribute(vertex.getTs(), EdgeType.EPS, attribute);
+        ss.modifyAttribute(vertex.getTs(), EdgeType.EPS.ordinal(), attribute);
         fCurrentWorkerLatestTime.put(attribute, vertex.getTs());
         try {
             return vertex.getTs() == ss.getStartTime() || currentEdge == null ? null : EdgeFactory.createEdge(ss.querySingleState(vertex.getTs() - 1, attribute));
@@ -328,7 +336,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
                     return false;
                 }
                 fCurrentInterval = quarkIterator.next();
-                return fCurrentInterval.getValue() != EdgeType.EPS;
+                return fCurrentInterval.getValue() != (Integer) EdgeType.EPS.ordinal();
             }
 
             @Override
@@ -383,6 +391,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
 
     @Override
     public void closeGraph(long endTime) {
+        // Serialize the graph worker hash map, close state system and segment
+        // store
+        fWorkerSerializer.serialize(fWorkerAttrib);
         ITmfStateSystemBuilder stateSystem = getStateSystem();
         stateSystem.closeHistory(endTime);
         ISegmentStore<ISegment> segmentStore = getSegmentStore();
