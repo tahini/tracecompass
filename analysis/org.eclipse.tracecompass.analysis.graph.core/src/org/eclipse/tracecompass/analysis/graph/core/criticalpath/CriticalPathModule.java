@@ -74,7 +74,7 @@ public class CriticalPathModule extends TmfAbstractAnalysisModule implements ICr
      *            The graph module that will be used to calculate the critical
      *            path on
      * @param worker The worker parameter to set
-     * @since 2.2
+     * @since 3.0
      */
     @VisibleForTesting
     public CriticalPathModule(TmfGraphBuilderModule graph, IGraphWorker worker) {

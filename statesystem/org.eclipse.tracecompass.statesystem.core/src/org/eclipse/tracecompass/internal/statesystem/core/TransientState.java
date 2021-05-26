@@ -340,6 +340,7 @@ public class TransientState {
                 fLatestTime = eventTime;
             }
 
+
         } finally {
             fRWLock.writeLock().unlock();
         }
