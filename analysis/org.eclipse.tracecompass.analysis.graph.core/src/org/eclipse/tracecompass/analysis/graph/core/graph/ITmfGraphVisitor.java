@@ -15,13 +15,10 @@
 
 package org.eclipse.tracecompass.analysis.graph.core.graph;
 
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
-
 /**
  * Interface for all graph visitors. Using on the graph exploration method, the
  * visit methods will be called for each vertex and edge visited
- * @since 3.0
+ * @since 2.2
  */
 public interface ITmfGraphVisitor {
 
@@ -33,7 +30,7 @@ public interface ITmfGraphVisitor {
      * @param vertex
      *            The visited vertex
      */
-    void visitHead(TmfVertex vertex);
+    void visitHead(ITmfVertex vertex);
 
     /**
      * Visits a vertex
@@ -41,7 +38,7 @@ public interface ITmfGraphVisitor {
      * @param vertex
      *            The visited vertex
      */
-    void visit(TmfVertex vertex);
+    void visit(ITmfVertex vertex);
 
     /**
      * Visits an edge
@@ -52,6 +49,6 @@ public interface ITmfGraphVisitor {
      *            Whether the edge is horizontal (beginning and end are of the
      *            same worker) or vertical
      */
-    void visit(TmfEdge edge, boolean horizontal);
+    void visit(ITmfEdge edge, boolean horizontal);
 
 }

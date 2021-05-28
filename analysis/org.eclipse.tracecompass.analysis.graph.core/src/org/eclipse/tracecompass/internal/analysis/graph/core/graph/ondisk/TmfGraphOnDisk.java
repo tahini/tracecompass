@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.tracecompass.analysis.graph.core.graph;
+package org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,11 +25,12 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfGraph;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfVertex;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfVertex.EdgeDirection;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge.EdgeType;
 import org.eclipse.tracecompass.internal.analysis.graph.core.base.Messages;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex.EdgeDirection;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.VerticalEdgeSegment;
 import org.eclipse.tracecompass.segmentstore.core.ISegment;
 import org.eclipse.tracecompass.segmentstore.core.ISegmentStore;
@@ -121,24 +122,30 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public TmfVertex createVertex(IGraphWorker worker, long timestamp) {
+    public ITmfVertex createVertex(IGraphWorker worker, long timestamp) {
         ITmfStateSystemBuilder ss = getStateSystem();
         Integer attribute = fWorkerAttrib.computeIfAbsent(worker, (graphWorker) -> ss.getQuarkAbsoluteAndAdd(WORKERS, String.valueOf(fCount++)));
         return new TmfVertex(timestamp, attribute);
     }
 
-    private void checkCurrentWorkerTime(TmfVertex vertex) {
-        Long latestTime = fCurrentWorkerLatestTime.getOrDefault(vertex.getAttribute(), 0L);
+    private void checkCurrentWorkerTime(ITmfVertex vertex) {
+        if (!(vertex instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
+        Long latestTime = fCurrentWorkerLatestTime.getOrDefault(((TmfVertex) vertex).getAttribute(), 0L);
         if (latestTime > vertex.getTs()) {
             throw new IllegalArgumentException("Vertex is earlier than latest time for this worker"); //$NON-NLS-1$
         }
     }
 
     @Override
-    public void add(TmfVertex vertex) {
+    public void add(ITmfVertex vertex) {
+        if (!(vertex instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
         checkCurrentWorkerTime(vertex);
         ITmfStateSystemBuilder ss = getStateSystem();
-        int attribute = vertex.getAttribute();
+        int attribute = ((TmfVertex) vertex).getAttribute();
         Object currentEdge = ss.queryOngoing(attribute);
         if (currentEdge != null) {
             ss.updateOngoingState(EdgeType.NO_EDGE.ordinal(), attribute);
@@ -148,15 +155,18 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable TmfEdge append(TmfVertex vertex) {
+    public @Nullable ITmfEdge append(ITmfVertex vertex) {
         return append(vertex, EdgeType.DEFAULT);
     }
 
     @Override
-    public @Nullable TmfEdge append(TmfVertex vertex, EdgeType type) {
+    public @Nullable ITmfEdge append(ITmfVertex vertex, EdgeType type) {
+        if (!(vertex instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
         checkCurrentWorkerTime(vertex);
         ITmfStateSystemBuilder ss = getStateSystem();
-        int attribute = vertex.getAttribute();
+        int attribute = ((TmfVertex) vertex).getAttribute();
         Object currentEdge = ss.queryOngoing(attribute);
         if (currentEdge != null) {
             ss.updateOngoingState(type.ordinal(), attribute);
@@ -171,10 +181,13 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable TmfEdge append(TmfVertex vertex, EdgeType type, @Nullable String linkQualifier) {
+    public @Nullable ITmfEdge append(ITmfVertex vertex, EdgeType type, @Nullable String linkQualifier) {
+        if (!(vertex instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
         checkCurrentWorkerTime(vertex);
         ITmfStateSystemBuilder ss = getStateSystem();
-        int attribute = vertex.getAttribute();
+        int attribute = ((TmfVertex) vertex).getAttribute();
         Object currentEdge = ss.queryOngoing(attribute);
         if (currentEdge != null) {
             ss.updateOngoingState(type.ordinal(), attribute);
@@ -204,7 +217,11 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable TmfEdge getEdgeFrom(TmfVertex vertex, EdgeDirection direction) {
+    public @Nullable ITmfEdge getEdgeFrom(ITmfVertex node, EdgeDirection direction) {
+        if (!(node instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
+        TmfVertex vertex = (TmfVertex) node;
         try {
             ITmfStateSystemBuilder ss = getStateSystem();
             ISegmentStore<ISegment> segmentStore = getSegmentStore();
@@ -243,17 +260,23 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable TmfEdge link(TmfVertex from, TmfVertex to) {
+    public @Nullable ITmfEdge link(ITmfVertex from, ITmfVertex to) {
         return link(from, to, EdgeType.DEFAULT);
     }
 
     @Override
-    public @Nullable TmfEdge link(TmfVertex from, TmfVertex to, EdgeType type) {
+    public @Nullable ITmfEdge link(ITmfVertex from, ITmfVertex to, EdgeType type) {
         return link(from, to, type, StringUtils.EMPTY);
     }
 
     @Override
-    public @Nullable TmfEdge link(TmfVertex from, TmfVertex to, EdgeType type, String linkQualifier) {
+    public @Nullable ITmfEdge link(ITmfVertex from, ITmfVertex to, EdgeType type, String linkQualifier) {
+        if (!(from instanceof TmfVertex) || !(to instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
+        TmfVertex fromVertex = (TmfVertex) from;
+        TmfVertex toVertex = (TmfVertex) to;
+
         if (from.equals(to)) {
             throw new IllegalArgumentException("A node cannot link to itself"); //$NON-NLS-1$
         }
@@ -265,7 +288,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
             }
             boolean toInGraph = isVertexInGraph(to);
             // Are they from the same worker? Add horizontal link
-            if (from.getAttribute() == to.getAttribute()) {
+            if (fromVertex.getAttribute() == toVertex.getAttribute()) {
                 return append(to, type, linkQualifier);
             }
             // From different workers, add a vertical link
@@ -273,7 +296,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
                 add(to);
             }
             ISegmentStore<ISegment> segmentStore = getSegmentStore();
-            VerticalEdgeSegment verticalEdgeSegment = new VerticalEdgeSegment(from.getTs(), to.getTs(), from.getAttribute(), to.getAttribute(), type, linkQualifier);
+            VerticalEdgeSegment verticalEdgeSegment = new VerticalEdgeSegment(from.getTs(), to.getTs(), fromVertex.getAttribute(), toVertex.getAttribute(), type, linkQualifier);
             segmentStore.add(verticalEdgeSegment);
             return EdgeFactory.createEdge(verticalEdgeSegment);
         } catch (StateSystemDisposedException e) {
@@ -283,21 +306,25 @@ public class TmfGraphOnDisk implements ITmfGraph {
         return null;
     }
 
-    private boolean isVertexInGraph(TmfVertex from) throws StateSystemDisposedException {
-        Long ts = fCurrentWorkerLatestTime.get(from.getAttribute());
+    private boolean isVertexInGraph(ITmfVertex from) throws StateSystemDisposedException {
+        if (!(from instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
+
+        Long ts = fCurrentWorkerLatestTime.get(((TmfVertex) from).getAttribute());
         if (ts == null || from.getTs() > ts) {
             return false;
         }
         if (from.getTs() == ts) {
             return true;
         }
-        ITmfStateInterval interval = getStateSystem().querySingleState(from.getTs(), from.getAttribute());
+        ITmfStateInterval interval = getStateSystem().querySingleState(from.getTs(), ((TmfVertex) from).getAttribute());
         // The start time should be the timestamp, otherwise, it means the vertex is not in the graph and can't be added
         return (interval.getStartTime() == from.getTs());
     }
 
     @Override
-    public @Nullable TmfVertex getTail(IGraphWorker worker) {
+    public @Nullable ITmfVertex getTail(IGraphWorker worker) {
         Integer attribute = fWorkerAttrib.get(worker);
         if (attribute == null) {
             return null;
@@ -318,7 +345,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable TmfVertex getHead(IGraphWorker worker) {
+    public @Nullable ITmfVertex getHead(IGraphWorker worker) {
         Integer attribute = fWorkerAttrib.get(worker);
         if (attribute == null) {
             return null;
@@ -327,9 +354,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public TmfVertex getHead(TmfVertex vertex) {
-        TmfVertex headVertex = vertex;
-        TmfEdge edgeFrom = getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+    public ITmfVertex getHead(ITmfVertex vertex) {
+        ITmfVertex headVertex = vertex;
+        ITmfEdge edgeFrom = getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
         while (edgeFrom != null) {
             headVertex = edgeFrom.getVertexFrom();
             edgeFrom = getEdgeFrom(headVertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
@@ -337,7 +364,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
         return headVertex;
     }
 
-    private @Nullable TmfVertex getHeadForAttribute(int attribute) {
+    private @Nullable ITmfVertex getHeadForAttribute(int attribute) {
         ITmfStateSystemBuilder ss = getStateSystem();
         try {
             ITmfStateInterval interval = ss.querySingleState(ss.getStartTime(), attribute);
@@ -353,7 +380,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public Iterator<TmfVertex> getNodesOf(IGraphWorker worker) {
+    public Iterator<ITmfVertex> getNodesOf(IGraphWorker worker) {
         ITmfStateSystemBuilder ss = getStateSystem();
         Integer attribute = fWorkerAttrib.get(worker);
         if (attribute == null) {
@@ -361,7 +388,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
         }
         long currentEndTime = ss.waitUntilBuilt(0) ? ss.getCurrentEndTime() : ss.getCurrentEndTime() + 1;
         QuarkIterator quarkIterator = new StateSystemUtils.QuarkIterator(ss, attribute, ss.getStartTime(), currentEndTime, 1);
-        return new Iterator<TmfVertex>() {
+        return new Iterator<ITmfVertex>() {
 
             private boolean fGotFirst = false;
             private @Nullable ITmfStateInterval fCurrentInterval = null;
@@ -379,7 +406,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
             }
 
             @Override
-            public TmfVertex next() {
+            public ITmfVertex next() {
                 hasNext();
                 ITmfStateInterval next = fCurrentInterval;
                 if (next == null) {
@@ -400,8 +427,11 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable IGraphWorker getParentOf(TmfVertex node) {
-        return fWorkerAttrib.inverse().get(node.getAttribute());
+    public @Nullable IGraphWorker getParentOf(ITmfVertex node) {
+        if (!(node instanceof TmfVertex)) {
+            throw new IllegalArgumentException("Wrong vertex class"); //$NON-NLS-1$
+        }
+        return fWorkerAttrib.inverse().get(((TmfVertex) node).getAttribute());
     }
 
     @Override
@@ -410,7 +440,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
     }
 
     @Override
-    public @Nullable TmfVertex getVertexAt(ITmfTimestamp startTime, IGraphWorker worker) {
+    public @Nullable ITmfVertex getVertexAt(ITmfTimestamp startTime, IGraphWorker worker) {
         // TODO Auto-generated method stub
         return null;
     }

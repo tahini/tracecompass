@@ -9,12 +9,10 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.tracecompass.analysis.graph.core.graph;
+package org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge.EdgeType;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.VerticalEdgeSegment;
 import org.eclipse.tracecompass.segmentstore.core.ISegment;
 import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;

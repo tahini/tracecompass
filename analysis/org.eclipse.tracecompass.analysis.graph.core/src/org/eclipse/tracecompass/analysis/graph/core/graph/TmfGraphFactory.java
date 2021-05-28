@@ -16,7 +16,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 import org.eclipse.jdt.annotation.Nullable;
-import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraphOnDisk.WorkerSerializer;
+import org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk.TmfGraphOnDisk;
+import org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk.TmfGraphOnDisk.WorkerSerializer;
 
 /**
  * @author Geneviève Bastien

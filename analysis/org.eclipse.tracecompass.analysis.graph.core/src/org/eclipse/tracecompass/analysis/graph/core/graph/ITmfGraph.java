@@ -24,9 +24,7 @@ import java.util.Set;
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge.EdgeType;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex.EdgeDirection;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfVertex.EdgeDirection;
 import org.eclipse.tracecompass.tmf.core.timestamp.ITmfTimestamp;
 
 /**
@@ -42,7 +40,7 @@ import org.eclipse.tracecompass.tmf.core.timestamp.ITmfTimestamp;
  */
 public interface ITmfGraph {
 
-    TmfVertex createVertex(IGraphWorker worker, long timestamp);
+    ITmfVertex createVertex(IGraphWorker worker, long timestamp);
 
     /**
      * Add node to the provided object without linking
@@ -52,7 +50,7 @@ public interface ITmfGraph {
      * @param vertex
      *            The new vertex
      */
-    void add(TmfVertex vertex);
+    void add(ITmfVertex vertex);
 
     /**
      * Add node to object's list and make horizontal link with tail.
@@ -63,7 +61,7 @@ public interface ITmfGraph {
      *            The new vertex
      * @return The edge constructed
      */
-    @Nullable TmfEdge append(TmfVertex vertex);
+    @Nullable ITmfEdge append(ITmfVertex vertex);
 
     /**
      * Add node to object's list and make horizontal link with tail.
@@ -76,7 +74,7 @@ public interface ITmfGraph {
      *            The type of edge to create
      * @return The edge constructed
      */
-    @Nullable TmfEdge append(TmfVertex vertex, EdgeType type);
+    @Nullable ITmfEdge append(ITmfVertex vertex, EdgeType type);
 
     /**
      * Add node to object's list and make horizontal link with tail.
@@ -92,7 +90,7 @@ public interface ITmfGraph {
      * @return The edge constructed
      * @since 2.1
      */
-    @Nullable TmfEdge append(TmfVertex vertex, EdgeType type, @Nullable String linkQualifier);
+    @Nullable ITmfEdge append(ITmfVertex vertex, EdgeType type, @Nullable String linkQualifier);
 
     /**
      * Add a link between two vertices of the graph. The from vertex must be in
@@ -109,7 +107,7 @@ public interface ITmfGraph {
      *            The destination vertex
      * @return The newly created edge
      */
-    @Nullable TmfEdge link(TmfVertex from, TmfVertex to);
+    @Nullable ITmfEdge link(ITmfVertex from, ITmfVertex to);
 
     /**
      * Add a link between two vertices of the graph. The from vertex must be in
@@ -128,7 +126,7 @@ public interface ITmfGraph {
      *            The type of edge to create
      * @return The newly created edge
      */
-    @Nullable TmfEdge link(TmfVertex from, TmfVertex to, EdgeType type);
+    @Nullable ITmfEdge link(ITmfVertex from, ITmfVertex to, EdgeType type);
 
     /**
      * Add a link between two vertices of the graph. The from vertex must be in the
@@ -150,7 +148,7 @@ public interface ITmfGraph {
      * @return The newly created edge
      * @since 2.1
      */
-    @Nullable TmfEdge link(TmfVertex from, TmfVertex to, EdgeType type, String linkQualifier);
+    @Nullable ITmfEdge link(ITmfVertex from, ITmfVertex to, EdgeType type, String linkQualifier);
 
     /**
      * Returns tail node of the provided object
@@ -159,7 +157,7 @@ public interface ITmfGraph {
      *            The key of the object the vertex belongs to
      * @return The last vertex of obj
      */
-    @Nullable TmfVertex getTail(IGraphWorker worker);
+    @Nullable ITmfVertex getTail(IGraphWorker worker);
 
     /**
      * Returns head node of the provided object. This is the very first node of
@@ -169,7 +167,7 @@ public interface ITmfGraph {
      *            The key of the object the vertex belongs to
      * @return The head vertex
      */
-    @Nullable TmfVertex getHead(IGraphWorker worker);
+    @Nullable ITmfVertex getHead(IGraphWorker worker);
 
     /**
      * Returns head vertex from a given node. That is the first of the current
@@ -180,7 +178,7 @@ public interface ITmfGraph {
      *            The vertex for which to get the head
      * @return The head vertex from the requested vertex
      */
-    TmfVertex getHead(TmfVertex vertex);
+    ITmfVertex getHead(ITmfVertex vertex);
 
     /**
      * Returns all nodes of the provided object.
@@ -189,7 +187,7 @@ public interface ITmfGraph {
      *            The key of the object the vertex belongs to
      * @return The list of vertices for the object
      */
-    Iterator<TmfVertex> getNodesOf(IGraphWorker obj);
+    Iterator<ITmfVertex> getNodesOf(IGraphWorker obj);
 
     /**
      * Returns the object the vertex belongs to
@@ -198,7 +196,7 @@ public interface ITmfGraph {
      *            The vertex to get the parent for
      * @return The object the vertex belongs to
      */
-    @Nullable IGraphWorker getParentOf(TmfVertex node);
+    @Nullable IGraphWorker getParentOf(ITmfVertex node);
 
     /**
      * Returns the graph objects
@@ -226,27 +224,27 @@ public interface ITmfGraph {
      * @param visitor
      *            The visitor
      */
-    default void scanLineTraverse(final @Nullable TmfVertex start, final ITmfGraphVisitor visitor) {
+    default void scanLineTraverse(final @Nullable ITmfVertex start, final ITmfGraphVisitor visitor) {
         if (start == null) {
             return;
         }
-        Deque<TmfVertex> stack = new ArrayDeque<>();
-        HashSet<TmfVertex> visited = new HashSet<>();
+        Deque<ITmfVertex> stack = new ArrayDeque<>();
+        HashSet<ITmfVertex> visited = new HashSet<>();
         stack.add(start);
         while (!stack.isEmpty()) {
-            TmfVertex curr = stack.removeFirst();
+            ITmfVertex curr = stack.removeFirst();
             if (visited.contains(curr)) {
                 continue;
             }
             // process one line
-            TmfVertex n = getHead(curr);
+            ITmfVertex n = getHead(curr);
             visitor.visitHead(n);
             while (true) {
                 visitor.visit(n);
                 visited.add(n);
 
                 // Only visit links up-right, guarantee to visit once only
-                TmfEdge edge = getEdgeFrom(n, EdgeDirection.OUTGOING_VERTICAL_EDGE);
+                ITmfEdge edge = getEdgeFrom(n, EdgeDirection.OUTGOING_VERTICAL_EDGE);
                 if (edge != null) {
                     stack.addFirst(edge.getVertexTo());
                     visitor.visit(edge, false);
@@ -268,7 +266,7 @@ public interface ITmfGraph {
     }
 
     /**
-     * @see TmfGraph#scanLineTraverse(TmfVertex, ITmfGraphVisitor)
+     * @see TmfGraph#scanLineTraverse(ITmfVertex, ITmfGraphVisitor)
      *
      * @param start
      *            The worker from which to start the scan
@@ -292,7 +290,7 @@ public interface ITmfGraph {
      *            The object for which to get the vertex
      * @return Vertex at timestamp or null if no vertex at or after timestamp
      */
-    @Nullable TmfVertex getVertexAt(ITmfTimestamp startTime, IGraphWorker worker);
+    @Nullable ITmfVertex getVertexAt(ITmfTimestamp startTime, IGraphWorker worker);
 
     /**
      * Returns whether the graph is completed or not
@@ -306,6 +304,6 @@ public interface ITmfGraph {
      */
     void closeGraph(long endTime);
 
-    @Nullable TmfEdge getEdgeFrom(TmfVertex vertex, EdgeDirection outgoingHorizontalEdge);
+    @Nullable ITmfEdge getEdgeFrom(ITmfVertex vertex, EdgeDirection outgoingHorizontalEdge);
 
 }

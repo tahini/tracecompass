@@ -20,8 +20,10 @@ import java.util.Map;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfGraph;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfGraphVisitor;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfVertex;
 
 
 /**
@@ -64,17 +66,17 @@ public class TmfGraphStatistics implements ITmfGraphVisitor {
     }
 
     @Override
-    public void visitHead(TmfVertex node) {
+    public void visitHead(ITmfVertex node) {
         // Do nothing
     }
 
     @Override
-    public void visit(TmfVertex node) {
+    public void visit(ITmfVertex node) {
         // Do nothing
     }
 
     @Override
-    public void visit(TmfEdge edge, boolean horizontal) {
+    public void visit(ITmfEdge edge, boolean horizontal) {
         // Add the duration of the link only if it is horizontal
         ITmfGraph graph = fGraph;
         synchronized (fWorkerStats) {

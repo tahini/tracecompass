@@ -27,7 +27,7 @@ import org.eclipse.tracecompass.analysis.graph.core.base.CycleDetectedException;
 import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
 import org.eclipse.tracecompass.common.core.NonNullUtils;
 import org.eclipse.tracecompass.internal.analysis.graph.core.base.Messages;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
+import org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk.TmfEdge;
 import org.eclipse.tracecompass.tmf.core.timestamp.ITmfTimestamp;
 
 import com.google.common.collect.ArrayListMultimap;

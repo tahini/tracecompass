@@ -13,7 +13,7 @@
  *   Geneviève Bastien - Initial implementation and API
  *******************************************************************************/
 
-package org.eclipse.tracecompass.internal.analysis.graph.core.graph;
+package org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge;

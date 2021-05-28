@@ -15,7 +15,7 @@ import java.util.Map;
 
 import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.tracecompass.internal.analysis.graph.core.base.Messages;
-import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
+import org.eclipse.tracecompass.internal.analysis.graph.core.graph.ondisk.TmfVertex;
 import org.eclipse.tracecompass.tmf.core.dataprovider.X11ColorUtils;
 import org.eclipse.tracecompass.tmf.core.model.StyleProperties;
 
