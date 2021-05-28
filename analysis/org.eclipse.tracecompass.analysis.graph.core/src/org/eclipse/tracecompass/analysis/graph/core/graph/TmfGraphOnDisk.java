@@ -14,6 +14,7 @@ package org.eclipse.tracecompass.analysis.graph.core.graph;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -43,6 +44,10 @@ import org.eclipse.tracecompass.statesystem.core.exceptions.StateSystemDisposedE
 import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;
 import org.eclipse.tracecompass.tmf.core.timestamp.ITmfTimestamp;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
+import com.google.common.collect.ImmutableMap;
+
 /**
  * @author Geneviève Bastien
  * @since 2.2
@@ -53,7 +58,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
     private static final String WORKERS = "WORKERS"; //$NON-NLS-1$
     private @Nullable ITmfStateSystemBuilder fSs;
     private @Nullable ISegmentStore<ISegment> fSegStore;
-    private Map<IGraphWorker, Integer> fWorkerAttrib = new HashMap<>();
+    private BiMap<IGraphWorker, Integer> fWorkerAttrib = HashBiMap.create();
     // Maps a state system attribute to the timestamp of the latest vertex
     private Map<Integer, Long> fCurrentWorkerLatestTime = new HashMap<>();
     private Integer fCount = 0;
@@ -102,7 +107,8 @@ public class TmfGraphOnDisk implements ITmfGraph {
         ISegmentStore<ISegment> segStore = SegmentStoreFactory.createOnDiskSegmentStore(segmentFile, VerticalEdgeSegment.EDGE_STATE_VALUE_FACTORY, VERSION);
         fSegStore = segStore;
 
-        fWorkerAttrib = fWorkerSerializer.deserialize();
+        Map<IGraphWorker, Integer> deserialize = fWorkerSerializer.deserialize();
+        fWorkerAttrib.putAll(deserialize);
 
     }
 
@@ -217,6 +223,7 @@ public class TmfGraphOnDisk implements ITmfGraph {
             }
             case OUTGOING_HORIZONTAL_EDGE: {
                 ITmfStateInterval interval = ss.querySingleState(vertex.getTs(), vertex.getAttribute());
+
                 return EdgeFactory.createEdge(interval);
             }
             case OUTGOING_VERTICAL_EDGE: {
@@ -247,6 +254,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
 
     @Override
     public @Nullable TmfEdge link(TmfVertex from, TmfVertex to, EdgeType type, String linkQualifier) {
+        if (from.equals(to)) {
+            throw new IllegalArgumentException("A node cannot link to itself"); //$NON-NLS-1$
+        }
 
         try {
             // Are vertexes in the graph? From should be, to can be added
@@ -288,38 +298,67 @@ public class TmfGraphOnDisk implements ITmfGraph {
 
     @Override
     public @Nullable TmfVertex getTail(IGraphWorker worker) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public @Nullable TmfVertex removeTail(IGraphWorker worker) {
-        // TODO Auto-generated method stub
-        return null;
+        Integer attribute = fWorkerAttrib.get(worker);
+        if (attribute == null) {
+            return null;
+        }
+        ITmfStateSystemBuilder ss = getStateSystem();
+        try {
+            long currentEndTime = ss.getCurrentEndTime();
+            ITmfStateInterval interval = ss.querySingleState(currentEndTime, attribute);
+            Object value = interval.getValue();
+            if (value == null || (Integer) value == EdgeType.EPS.ordinal()) {
+                return new TmfVertex(interval.getStartTime(), attribute);
+            }
+            return new TmfVertex(currentEndTime, attribute);
+        } catch (StateSystemDisposedException e) {
+            // Nothing to do, but don't know about the head, just return vertex
+            return null;
+        }
     }
 
     @Override
     public @Nullable TmfVertex getHead(IGraphWorker worker) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public @Nullable TmfVertex getHead() {
-        // TODO Auto-generated method stub
-        return null;
+        Integer attribute = fWorkerAttrib.get(worker);
+        if (attribute == null) {
+            return null;
+        }
+        return getHeadForAttribute(attribute);
     }
 
     @Override
     public TmfVertex getHead(TmfVertex vertex) {
-        // TODO Auto-generated method stub
-        return null;
+        TmfVertex headVertex = vertex;
+        TmfEdge edgeFrom = getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+        while (edgeFrom != null) {
+            headVertex = edgeFrom.getVertexFrom();
+            edgeFrom = getEdgeFrom(headVertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+        }
+        return headVertex;
+    }
+
+    private @Nullable TmfVertex getHeadForAttribute(int attribute) {
+        ITmfStateSystemBuilder ss = getStateSystem();
+        try {
+            ITmfStateInterval interval = ss.querySingleState(ss.getStartTime(), attribute);
+            Object value = interval.getValue();
+            if (value == null) {
+                return new TmfVertex(interval.getEndTime() + 1, attribute);
+            }
+            return new TmfVertex(interval.getStartTime(), attribute);
+        } catch (StateSystemDisposedException e) {
+            // Return null, nothing to do
+            return null;
+        }
     }
 
     @Override
     public Iterator<TmfVertex> getNodesOf(IGraphWorker worker) {
         ITmfStateSystemBuilder ss = getStateSystem();
-        Integer attribute = fWorkerAttrib.computeIfAbsent(worker, (graphWorker) -> ss.getQuarkAbsoluteAndAdd("worker", String.valueOf(fCount++)));
+        Integer attribute = fWorkerAttrib.get(worker);
+        if (attribute == null) {
+            return Collections.emptyIterator();
+        }
         long currentEndTime = ss.waitUntilBuilt(0) ? ss.getCurrentEndTime() : ss.getCurrentEndTime() + 1;
         QuarkIterator quarkIterator = new StateSystemUtils.QuarkIterator(ss, attribute, ss.getStartTime(), currentEndTime, 1);
         return new Iterator<TmfVertex>() {
@@ -362,19 +401,12 @@ public class TmfGraphOnDisk implements ITmfGraph {
 
     @Override
     public @Nullable IGraphWorker getParentOf(TmfVertex node) {
-        // TODO Auto-generated method stub
-        return null;
+        return fWorkerAttrib.inverse().get(node.getAttribute());
     }
 
     @Override
     public Set<IGraphWorker> getWorkers() {
         return fWorkerAttrib.keySet();
-    }
-
-    @Override
-    public int size() {
-        // TODO Auto-generated method stub
-        return 0;
     }
 
     @Override
@@ -391,9 +423,9 @@ public class TmfGraphOnDisk implements ITmfGraph {
 
     @Override
     public void closeGraph(long endTime) {
-        // Serialize the graph worker hash map, close state system and segment
+        // Serialize the graph worker as a hash map, close state system and segment
         // store
-        fWorkerSerializer.serialize(fWorkerAttrib);
+        fWorkerSerializer.serialize(ImmutableMap.copyOf(fWorkerAttrib));
         ITmfStateSystemBuilder stateSystem = getStateSystem();
         stateSystem.closeHistory(endTime);
         ISegmentStore<ISegment> segmentStore = getSegmentStore();

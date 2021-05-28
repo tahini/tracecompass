@@ -17,6 +17,7 @@ package org.eclipse.tracecompass.analysis.graph.core.tests.graph;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 
 import java.io.FileInputStream;
@@ -36,11 +37,13 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.tracecompass.analysis.graph.core.base.IGraphWorker;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfEdge.EdgeType;
 import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfGraph;
+import org.eclipse.tracecompass.analysis.graph.core.graph.ITmfGraphVisitor;
 import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraph;
 import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraphFactory;
 import org.eclipse.tracecompass.analysis.graph.core.graph.TmfGraphOnDisk.WorkerSerializer;
 import org.eclipse.tracecompass.analysis.graph.core.tests.stubs.TestGraphWorker;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfEdge;
+import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfGraphStatistics;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex;
 import org.eclipse.tracecompass.internal.analysis.graph.core.graph.TmfVertex.EdgeDirection;
 import org.junit.After;
@@ -66,12 +69,14 @@ public class TmfGraphOnDiskTest {
     private Path fGraphFile;
     private Path fGraphSegmentFile;
     private Path fGraphWorkerFiler;
+    private ITmfGraph fGraph;
 
     public class TestWorkerSerializer implements WorkerSerializer {
 
         @Override
         public void serialize(@NonNull Map<@NonNull IGraphWorker, @NonNull Integer> workerAttrib) {
-            // Serialize the graph worker hash map, close state system and segment store
+            // Serialize the graph worker hash map, close state system and
+            // segment store
             try (FileOutputStream fos = new FileOutputStream(fGraphWorkerFiler.toString());
                     ObjectOutputStream oos = new ObjectOutputStream(fos);) {
                 oos.writeObject(workerAttrib);
@@ -86,7 +91,7 @@ public class TmfGraphOnDiskTest {
             try (FileInputStream fis = new FileInputStream(fGraphWorkerFiler.toString());
                     ObjectInputStream ois = new ObjectInputStream(fis);) {
 
-                return (Map) ois.readObject();
+                return (Map<IGraphWorker, Integer>) ois.readObject();
             } catch (IOException ioe) {
                 ioe.printStackTrace();
                 return new HashMap<>();
@@ -104,6 +109,7 @@ public class TmfGraphOnDiskTest {
         fGraphFile = Files.createTempFile("tmpGraph", ".ht");
         fGraphSegmentFile = Files.createTempFile("tmpGraph", ".seg");
         fGraphWorkerFiler = Files.createTempFile("tmpGraph", ".workers");
+        fGraph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
     }
 
     @After
@@ -118,62 +124,64 @@ public class TmfGraphOnDiskTest {
      */
     @Test
     public void testDefaultConstructor() {
-        ITmfGraph g = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
-        assertEquals(0, g.size());
+        ITmfGraph graph = TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer());
+        assertNotNull(graph);
+        Iterator<TmfVertex> it = graph.getNodesOf(WORKER1);
+        assertEquals(0, ImmutableList.copyOf(it).size());
     }
 
     /**
-     * Test the {@link TmfGraph#add(IGraphWorker, TmfVertex)} method: vertices are
-     * added, but no edge between them is created
+     * Test the {@link TmfGraph#add(IGraphWorker, TmfVertex)} method: vertices
+     * are added, but no edge between them is created
      */
     @Test
     public void testAddVertex() {
 
         // Add vertices for a single worker covering the entire graph.
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
-        TmfVertex v0 = graph.createVertex(WORKER1, 0);
-        graph.add(v0);
-        TmfVertex v1 = graph.createVertex(WORKER1, 1);
-        graph.add(v1);
-        Iterator<TmfVertex> it = graph.getNodesOf(WORKER1);
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        fGraph.add(v0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        fGraph.add(v1);
+        Iterator<TmfVertex> it = fGraph.getNodesOf(WORKER1);
         int count = 0;
         while (it.hasNext()) {
             TmfVertex vertex = it.next();
             assertEquals("Vertext at count " + count, count, vertex.getTs());
-            graph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_VERTICAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.INCOMING_VERTICAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_VERTICAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.INCOMING_VERTICAL_EDGE);
             count++;
         }
         assertEquals(2, count);
 
-        // Add vertices for another worker later on the graph, to make sure vertex count is still ok
-        TmfVertex v2 = graph.createVertex(WORKER2, 2);
-        graph.add(v2);
-        TmfVertex v3 = graph.createVertex(WORKER2, 3);
-        graph.add(v3);
-        it = graph.getNodesOf(WORKER1);
+        // Add vertices for another worker later on the graph, to make sure
+        // vertex count is still ok
+        TmfVertex v2 = fGraph.createVertex(WORKER2, 2);
+        fGraph.add(v2);
+        TmfVertex v3 = fGraph.createVertex(WORKER2, 3);
+        fGraph.add(v3);
+        it = fGraph.getNodesOf(WORKER1);
         count = 0;
         while (it.hasNext()) {
             TmfVertex vertex = it.next();
             assertEquals(count, vertex.getTs());
-            graph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_VERTICAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.INCOMING_VERTICAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_VERTICAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.INCOMING_VERTICAL_EDGE);
             count++;
         }
         assertEquals(2, count);
-        it = graph.getNodesOf(WORKER2);
+        it = fGraph.getNodesOf(WORKER2);
         count = 0;
         while (it.hasNext()) {
             TmfVertex vertex = it.next();
             assertEquals(count + 2, vertex.getTs());
-            graph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_VERTICAL_EDGE);
-            graph.getEdgeFrom(vertex, EdgeDirection.INCOMING_VERTICAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.OUTGOING_VERTICAL_EDGE);
+            fGraph.getEdgeFrom(vertex, EdgeDirection.INCOMING_VERTICAL_EDGE);
             count++;
         }
         assertEquals(2, count);
@@ -181,43 +189,42 @@ public class TmfGraphOnDiskTest {
 
     /**
      * Test the {@link TmfGraph#append(IGraphWorker, TmfVertex)} and
-     * {@link TmfGraph#append(IGraphWorker, TmfVertex, EdgeType)} methods: vertices
-     * are added and links are created between them.
+     * {@link TmfGraph#append(IGraphWorker, TmfVertex, EdgeType)} methods:
+     * vertices are added and links are created between them.
      */
     @Test
     public void testAppendVertex() {
 
         // Add vertices for a single worker covering the entire graph.
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
-        TmfVertex v0 = graph.createVertex(WORKER1, 0);
-        TmfEdge edge = graph.append(v0);
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        TmfEdge edge = fGraph.append(v0);
         assertNull("First edge of a worker", edge);
-        TmfVertex v1 = graph.createVertex(WORKER1, 1);
-        edge = graph.append(v1);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        edge = fGraph.append(v1);
         assertNotNull(edge);
         assertEquals(EdgeType.DEFAULT, edge.getEdgeType());
         assertEquals(v1, edge.getVertexTo());
         assertEquals(v0, edge.getVertexFrom());
         assertEquals(v1.getTs() - v0.getTs(), edge.getDuration());
 
-        Iterator<@NonNull TmfVertex> it = graph.getNodesOf(WORKER1);
+        Iterator<@NonNull TmfVertex> it = fGraph.getNodesOf(WORKER1);
         List<@NonNull TmfVertex> list = ImmutableList.copyOf(it);
         assertEquals(2, list.size());
-        checkLinkHorizontal(list, graph);
+        checkLinkHorizontal(list, fGraph);
 
         /* Append with a type */
-        TmfVertex v2 = graph.createVertex(WORKER1, 2);
-        edge = graph.append(v2, EdgeType.BLOCKED);
+        TmfVertex v2 = fGraph.createVertex(WORKER1, 2);
+        edge = fGraph.append(v2, EdgeType.BLOCKED);
         assertNotNull(edge);
         assertEquals(EdgeType.BLOCKED, edge.getEdgeType());
         assertEquals(v2, edge.getVertexTo());
         assertEquals(v1, edge.getVertexFrom());
         assertEquals(v2.getTs() - v1.getTs(), edge.getDuration());
 
-        it = graph.getNodesOf(WORKER1);
+        it = fGraph.getNodesOf(WORKER1);
         list = ImmutableList.copyOf(it);
         assertEquals(3, list.size());
-        checkLinkHorizontal(list, graph);
+        checkLinkHorizontal(list, fGraph);
 
     }
 
@@ -226,11 +233,10 @@ public class TmfGraphOnDiskTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void testIllegalVertex() {
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
-        TmfVertex v0 = graph.createVertex(WORKER1, 0);
-        TmfVertex v1 = graph.createVertex(WORKER1, 1);
-        graph.add(v1);
-        graph.add(v0);
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        fGraph.add(v1);
+        fGraph.add(v0);
     }
 
     /**
@@ -240,79 +246,80 @@ public class TmfGraphOnDiskTest {
     @Test
     public void testLink() {
         // Start with a first node
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
-        TmfVertex v0 = graph.createVertex(WORKER1, 0);
-        graph.add(v0);
-        TmfVertex v1 = graph.createVertex(WORKER1, 1);
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        fGraph.add(v0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
 
         // Link with second node not in graph
-        TmfEdge edge = graph.link(v0, v1);
+        TmfEdge edge = fGraph.link(v0, v1);
         assertNotNull(edge);
         assertEquals(EdgeType.DEFAULT, edge.getEdgeType());
         assertEquals(v1, edge.getVertexTo());
         assertEquals(v0, edge.getVertexFrom());
         assertEquals(v1.getTs() - v0.getTs(), edge.getDuration());
 
-        Iterator<TmfVertex> it = graph.getNodesOf(WORKER1);
+        Iterator<TmfVertex> it = fGraph.getNodesOf(WORKER1);
         assertEquals(2, ImmutableList.copyOf(it).size());
-        TmfEdge edge1 = graph.getEdgeFrom(v1, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+        TmfEdge edge1 = fGraph.getEdgeFrom(v1, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v0, edge1.getVertexFrom());
-        edge1 = graph.getEdgeFrom(v0, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v1, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+        assertNull(edge1);
+        edge1 = fGraph.getEdgeFrom(v0, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v1, edge1.getVertexTo());
 
         // Link with second node for the same object
-        TmfVertex v2 = graph.createVertex(WORKER1, 2);
-        edge = graph.link(v1,  v2, EdgeType.NETWORK);
+        TmfVertex v2 = fGraph.createVertex(WORKER1, 2);
+        edge = fGraph.link(v1, v2, EdgeType.NETWORK);
         assertNotNull(edge);
         assertEquals(EdgeType.NETWORK, edge.getEdgeType());
         assertEquals(v2, edge.getVertexTo());
         assertEquals(v1, edge.getVertexFrom());
         assertEquals(v2.getTs() - v1.getTs(), edge.getDuration());
 
-        it = graph.getNodesOf(WORKER1);
+        it = fGraph.getNodesOf(WORKER1);
         assertEquals(3, ImmutableList.copyOf(it).size());
-        edge1 = graph.getEdgeFrom(v2, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v2, EdgeDirection.INCOMING_HORIZONTAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v1, edge1.getVertexFrom());
-        edge1 = graph.getEdgeFrom(v1, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v1, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v2, edge1.getVertexTo());
 
         // Link with second node for another object
-        TmfVertex v3 = graph.createVertex(WORKER2, 3);
-        edge = graph.link(v2,  v3, EdgeType.NETWORK);
+        TmfVertex v3 = fGraph.createVertex(WORKER2, 3);
+        edge = fGraph.link(v2, v3, EdgeType.NETWORK);
         assertNotNull(edge);
         assertEquals(v3, edge.getVertexTo());
         assertEquals(v2, edge.getVertexFrom());
         assertEquals(EdgeType.NETWORK, edge.getEdgeType());
 
-        it = graph.getNodesOf(WORKER1);
+        it = fGraph.getNodesOf(WORKER1);
         assertEquals(3, ImmutableList.copyOf(it).size());
 
-        it = graph.getNodesOf(WORKER2);
+        it = fGraph.getNodesOf(WORKER2);
         assertEquals(1, ImmutableList.copyOf(it).size());
 
-        edge1 = graph.getEdgeFrom(v2, EdgeDirection.OUTGOING_VERTICAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v2, EdgeDirection.OUTGOING_VERTICAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v3, edge1.getVertexTo());
-        edge1 = graph.getEdgeFrom(v3, EdgeDirection.INCOMING_VERTICAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v3, EdgeDirection.INCOMING_VERTICAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v2, edge1.getVertexFrom());
 
         // No duration vertical link with second node for another object
-        TmfVertex v4 = graph.createVertex(WORKER3, 3);
-        edge = graph.link(v3,  v4, EdgeType.NETWORK, "test");
+        TmfVertex v4 = fGraph.createVertex(WORKER3, 3);
+        edge = fGraph.link(v3, v4, EdgeType.NETWORK, "test");
         assertNotNull(edge);
         assertEquals(v4, edge.getVertexTo());
         assertEquals(v3, edge.getVertexFrom());
         assertEquals(EdgeType.NETWORK, edge.getEdgeType());
 
-        edge1 = graph.getEdgeFrom(v3, EdgeDirection.OUTGOING_VERTICAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v3, EdgeDirection.OUTGOING_VERTICAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v4, edge1.getVertexTo());
-        edge1 = graph.getEdgeFrom(v4, EdgeDirection.INCOMING_VERTICAL_EDGE);
+        edge1 = fGraph.getEdgeFrom(v4, EdgeDirection.INCOMING_VERTICAL_EDGE);
         assertNotNull(edge1);
         assertEquals(v3, edge1.getVertexFrom());
 
@@ -321,6 +328,7 @@ public class TmfGraphOnDiskTest {
     /**
      * Verify that vertices in the list form a chain linked by edges and have no
      * vertical edges
+     *
      * @param graph
      */
     private static void checkLinkHorizontal(List<@NonNull TmfVertex> list, ITmfGraph graph) {
@@ -353,25 +361,24 @@ public class TmfGraphOnDiskTest {
     @Test
     public void testReReadGraph() {
         // Start with a first node
-        ITmfGraph graph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
-        TmfVertex v0 = graph.createVertex(WORKER1, 0);
-        graph.add(v0);
-        TmfVertex v1 = graph.createVertex(WORKER1, 1);
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        fGraph.add(v0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
 
         // Link with second node not in graph
-        TmfEdge edge = graph.link(v0, v1);
+        TmfEdge edge = fGraph.link(v0, v1);
 
-        TmfVertex v2 = graph.createVertex(WORKER1, 2);
-        edge = graph.link(v1,  v2, EdgeType.NETWORK);
+        TmfVertex v2 = fGraph.createVertex(WORKER1, 2);
+        edge = fGraph.link(v1, v2, EdgeType.NETWORK);
 
-        TmfVertex v3 = graph.createVertex(WORKER2, 3);
-        edge = graph.link(v2,  v3, EdgeType.NETWORK);
+        TmfVertex v3 = fGraph.createVertex(WORKER2, 3);
+        edge = fGraph.link(v2, v3, EdgeType.NETWORK);
 
-        TmfVertex v4 = graph.createVertex(WORKER3, 3);
-        edge = graph.link(v3,  v4, EdgeType.NETWORK, "test");
+        TmfVertex v4 = fGraph.createVertex(WORKER3, 3);
+        edge = fGraph.link(v3, v4, EdgeType.NETWORK, "test");
 
-        graph.closeGraph(3);
-        graph = null;
+        fGraph.closeGraph(3);
+        fGraph = null;
 
         ITmfGraph reOpenedGraph = Objects.requireNonNull(TmfGraphFactory.createGraphOnDisk(GRAPH_ID, fGraphFile.toFile(), fGraphSegmentFile, new TestWorkerSerializer()));
         // Assert the number of nodes per worker
@@ -416,297 +423,198 @@ public class TmfGraphOnDiskTest {
         assertEquals(v3, edge.getVertexFrom());
 
     }
-//
-//    /**
-//     * Test the {@link TmfGraph#getTail(IGraphWorker)} and
-//     * {@link TmfGraph#removeTail(IGraphWorker)} methods
-//     */
-//    @Test
-//    public void testTail() {
-//        fGraph.append(WORKER1, fV0);
-//        fGraph.append(WORKER1, fV1);
-//        assertEquals(fV1, fGraph.getTail(WORKER1));
-//        assertEquals(fV1, fGraph.removeTail(WORKER1));
-//        assertEquals(fV0, fGraph.getTail(WORKER1));
-//    }
-//
-//    /**
-//     * Test the {@link TmfGraph#getHead()} methods
-//     */
-//    @Test
-//    public void testHead() {
-//        assertNull(fGraph.getHead());
-//        fGraph.append(WORKER1, fV0);
-//        fGraph.append(WORKER1, fV1);
-//        assertEquals(fV0, fGraph.getHead());
-//        assertEquals(fV0, fGraph.getHead(WORKER1));
-//        assertEquals(fV0, fGraph.getHead(fV1));
-//        assertEquals(fV0, fGraph.getHead(fV0));
-//    }
-//
-//    /**
-//     * Test the {@link TmfGraph#getHead()} methods with 2 workers
-//     */
-//    @Test
-//    public void testHead2() {
-//        fGraph.append(WORKER1, fV1);
-//        fGraph.append(WORKER2, fV0);
-//        assertEquals(fV0, fGraph.getHead());
-//        assertEquals(fV1, fGraph.getHead(WORKER1));
-//        assertEquals(fV0, fGraph.getHead(WORKER2));
-//        assertEquals(fV1, fGraph.getHead(fV1));
-//        assertEquals(fV0, fGraph.getHead(fV0));
-//    }
-//
-//    /**
-//     * The test {@link TmfGraph#getParentOf(TmfVertex)} method
-//     */
-//    @Test
-//    public void testParent() {
-//        fGraph.append(WORKER1, fV0);
-//        fGraph.append(WORKER2, fV1);
-//        assertEquals(WORKER1, fGraph.getParentOf(fV0));
-//        assertNotSame(WORKER1, fGraph.getParentOf(fV1));
-//        assertEquals(WORKER2, fGraph.getParentOf(fV1));
-//    }
-//
-//    /**
-//     * Test the {@link TmfGraph#getVertexAt(ITmfTimestamp, IGraphWorker)} method
-//     */
-//    @Test
-//    public void testVertexAt() {
-//        TmfVertex[] vertices = new TmfVertex[5];
-//        for (int i = 0; i < 5; i++) {
-//            TmfVertex v = new TmfVertex((i + 1) * 5);
-//            vertices[i] = v;
-//            fGraph.append(WORKER1, v);
-//        }
-//        assertEquals(vertices[0], fGraph.getVertexAt(TmfTimestamp.fromSeconds(5), WORKER1));
-//        assertEquals(vertices[0], fGraph.getVertexAt(TmfTimestamp.fromSeconds(0), WORKER1));
-//        assertEquals(vertices[1], fGraph.getVertexAt(TmfTimestamp.fromSeconds(6), WORKER1));
-//        assertEquals(vertices[3], fGraph.getVertexAt(TmfTimestamp.fromSeconds(19), WORKER1));
-//        assertNull(fGraph.getVertexAt(TmfTimestamp.fromSeconds(19), WORKER2));
-//        assertEquals(vertices[3], fGraph.getVertexAt(TmfTimestamp.fromSeconds(20), WORKER1));
-//        assertEquals(vertices[4], fGraph.getVertexAt(TmfTimestamp.fromSeconds(21), WORKER1));
-//        assertNull(fGraph.getVertexAt(TmfTimestamp.fromSeconds(26), WORKER1));
-//    }
-//
-//    /**
-//     * Test the {@link TmfVertex#linkHorizontal(TmfVertex)} with non
-//     * chronological timestamps
-//     */
-//    @Test(expected = IllegalArgumentException.class)
-//    public void testCheckHorizontal() {
-//        TmfVertex n0 = new TmfVertex(10);
-//        TmfVertex n1 = new TmfVertex(0);
-//        n0.linkHorizontal(n1);
-//    }
-//
-//    /**
-//     * Test the {@link TmfVertex#linkVertical(TmfVertex)} with non chronological
-//     * timestamps
-//     */
-//    @Test(expected = IllegalArgumentException.class)
-//    public void testCheckVertical() {
-//        TmfVertex n0 = new TmfVertex(10);
-//        TmfVertex n1 = new TmfVertex(0);
-//        n0.linkVertical(n1);
-//    }
-//
-//    private class ScanCountVertex implements ITmfGraphVisitor {
-//        public int nbVertex = 0;
-//        public int nbVLink = 0;
-//        public int nbHLink = 0;
-//        public int nbStartVertex = 0;
-//
-//        @Override
-//        public void visitHead(TmfVertex node) {
-//            nbStartVertex++;
-//        }
-//
-//        @Override
-//        public void visit(TmfVertex node) {
-//            nbVertex++;
-//
-//        }
-//
-//        @Override
-//        public void visit(TmfEdge edge, boolean horizontal) {
-//            if (horizontal) {
-//                nbHLink++;
-//            } else {
-//                nbVLink++;
-//            }
-//        }
-//    }
-//
-//    /**
-//     * The following graph will be used
-//     *
-//     * <pre>
-//     * ____0___1___2___3___4___5___6___7___8___9___10___11___12___13___14___15
-//     *
-//     * A   *-------*       *---*-------*---*---*    *---*----*----*---------*
-//     *             |           |           |            |    |
-//     * B       *---*---*-------*   *-------*------------*    *----------*
-//     * </pre>
-//     */
-//    @SuppressWarnings("null")
-//    private static @NonNull TmfGraph buildFullGraph() {
-//        TmfGraph graph = new TmfGraph();
-//        TmfVertex[] vertexA;
-//        TmfVertex[] vertexB;
-//        long[] timesA = { 0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15 };
-//        long[] timesB = { 1, 2, 3, 5, 6, 8, 11, 12, 14 };
-//        vertexA = new TmfVertex[timesA.length];
-//        vertexB = new TmfVertex[timesB.length];
-//        for (int i = 0; i < timesA.length; i++) {
-//            vertexA[i] = new TmfVertex(timesA[i]);
-//        }
-//        for (int i = 0; i < timesB.length; i++) {
-//            vertexB[i] = new TmfVertex(timesB[i]);
-//        }
-//        graph.append(WORKER1, vertexA[0]);
-//        graph.append(WORKER1, vertexA[1]);
-//        graph.add(WORKER1, vertexA[2]);
-//        graph.append(WORKER1, vertexA[3]);
-//        graph.append(WORKER1, vertexA[4]);
-//        graph.append(WORKER1, vertexA[5]);
-//        graph.append(WORKER1, vertexA[6]);
-//        graph.add(WORKER1, vertexA[7]);
-//        graph.append(WORKER1, vertexA[8]);
-//        graph.append(WORKER1, vertexA[9]);
-//        graph.append(WORKER1, vertexA[10]);
-//        graph.append(WORKER1, vertexA[11]);
-//        graph.append(WORKER2, vertexB[0]);
-//        graph.append(WORKER2, vertexB[1]);
-//        graph.append(WORKER2, vertexB[2]);
-//        graph.append(WORKER2, vertexB[3]);
-//        graph.add(WORKER2, vertexB[4]);
-//        graph.append(WORKER2, vertexB[5]);
-//        graph.append(WORKER2, vertexB[6]);
-//        graph.add(WORKER2, vertexB[7]);
-//        graph.append(WORKER2, vertexB[8]);
-//        vertexA[1].linkVertical(vertexB[1]);
-//        vertexB[3].linkVertical(vertexA[3]);
-//        vertexA[5].linkVertical(vertexB[5]);
-//        vertexB[6].linkVertical(vertexA[8]);
-//        vertexA[9].linkVertical(vertexB[7]);
-//        return graph;
-//    }
-//
-//    /**
-//     * Test the {@link TmfGraph#scanLineTraverse(IGraphWorker, ITmfGraphVisitor)} method
-//     */
-//    @Test
-//    public void testScanCount() {
-//        TmfGraph graph = buildFullGraph();
-//        ScanCountVertex visitor = new ScanCountVertex();
-//        graph.scanLineTraverse(graph.getHead(WORKER1), visitor);
-//        assertEquals(21, visitor.nbVertex);
-//        assertEquals(6, visitor.nbStartVertex);
-//        assertEquals(5, visitor.nbVLink);
-//        assertEquals(15, visitor.nbHLink);
-//    }
-//
-//    /**
-//     * Test the {@link TmfGraphStatistics} class
-//     */
-//    @Test
-//    public void testGraphStatistics() {
-//        TmfGraph graph = buildFullGraph();
-//        TmfGraphStatistics stats = new TmfGraphStatistics();
-//        stats.computeGraphStatistics(graph, WORKER1);
-//        assertEquals(12, stats.getSum(WORKER1).longValue());
-//        assertEquals(11, stats.getSum(WORKER2).longValue());
-//        assertEquals(23, stats.getSum().longValue());
-//    }
-//
-//    /**
-//     * This visitor throws an exception if it visits twice the same vertex
-//     *
-//     * @author Francis Giraldeau
-//     *
-//     */
-//    private class DuplicateDetectorVisitor implements ITmfGraphVisitor {
-//        private final Set<TmfVertex> set = new HashSet<>();
-//        @Override
-//        public void visitHead(TmfVertex vertex) {
-//        }
-//        @Override
-//        public void visit(TmfEdge edge, boolean horizontal) {
-//        }
-//        @Override
-//        public void visit(TmfVertex vertex) {
-//            if (set.contains(vertex)) {
-//                throw new RuntimeException("node already visited");
-//            }
-//            set.add(vertex);
-//        }
-//    }
-//
-//    /**
-//     * Test that exception is thrown if a node is linked horizontally to itself
-//     */
-//    @Test(expected = IllegalArgumentException.class)
-//    public void testHorizontalSelfLink() {
-//        TmfVertex n0 = new TmfVertex(0);
-//        n0.linkHorizontal(n0);
-//    }
-//
-//    /**
-//     * Test that exception is thrown if a node is linked vertically to itself.
-//     */
-//    @Test(expected = IllegalArgumentException.class)
-//    public void testVerticalSelfLink() {
-//        TmfVertex n0 = new TmfVertex(0);
-//        n0.linkVertical(n0);
-//    }
-//
-//    /**
-//     * Test that the visitor detect a cycle in horizontal links. A cycle may
-//     * exists only between vertices with equal timetstamps.
-//     */
-//    @Test(expected = CycleDetectedException.class)
-//    public void testHorizontalCycle() {
-//        TmfVertex n0 = new TmfVertex(0);
-//        TmfVertex n1 = new TmfVertex(0);
-//        n0.linkHorizontal(n1);
-//        n1.linkHorizontal(n0);
-//        TmfGraph graph = new TmfGraph();
-//        graph.add(WORKER1, n0);
-//        graph.add(WORKER1, n1);
-//        graph.scanLineTraverse(n0, new DuplicateDetectorVisitor());
-//    }
-//
-//    /**
-//     * Test that scanLineTraverse terminates with the following graph:
-//     *
-//     * <pre>
-//     *          ^
-//     *          |
-//     *    +----->
-//     *    ^
-//     *    |
-//     *    +
-//     *
-//     * </pre>
-//     */
-//    @Test
-//    public void testScanLineTerminates() {
-//        TmfVertex n10 = new TmfVertex(0);
-//        TmfVertex n20 = new TmfVertex(0);
-//        TmfVertex n21 = new TmfVertex(1);
-//        TmfVertex n30 = new TmfVertex(1);
-//        TmfGraph graph = new TmfGraph();
-//        n10.linkVertical(n20);
-//        n20.linkHorizontal(n21);
-//        n21.linkVertical(n30);
-//        graph.add(WORKER1, n10);
-//        graph.add(WORKER2, n20);
-//        graph.add(WORKER2, n21);
-//        graph.add(WORKER3, n30);
-//        graph.scanLineTraverse(n20, new DuplicateDetectorVisitor());
-//    }
+
+    /**
+     * Test the {@link ITmfGraph#getTail(IGraphWorker)} methods
+     */
+    @Test
+    public void testTail() {
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        TmfVertex v2 = fGraph.createVertex(WORKER2, 2);
+        TmfVertex v3 = fGraph.createVertex(WORKER2, 3);
+        fGraph.append(v0);
+        fGraph.append(v1);
+        fGraph.append(v2);
+        fGraph.append(v3);
+        fGraph.closeGraph(3);
+        assertEquals(v1, fGraph.getTail(WORKER1));
+        assertEquals(v3, fGraph.getTail(WORKER2));
+    }
+
+    /**
+     * Test the {@link TmfGraph#getHead()} methods with 2 workers
+     */
+    @Test
+    public void testHead() {
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        TmfVertex v2 = fGraph.createVertex(WORKER2, 2);
+        TmfVertex v3 = fGraph.createVertex(WORKER2, 3);
+        fGraph.append(v0);
+        fGraph.append(v1);
+        fGraph.append(v2);
+        fGraph.append(v3);
+        fGraph.closeGraph(3);
+        assertEquals(v0, fGraph.getHead(WORKER1));
+        assertEquals(v0, fGraph.getHead(v1));
+        assertEquals(v0, fGraph.getHead(v0));
+        assertEquals(v2, fGraph.getHead(WORKER2));
+        assertEquals(v2, fGraph.getHead(v2));
+        assertEquals(v2, fGraph.getHead(v3));
+    }
+
+    /**
+     * Test the {@link TmfGraph#getHead(TmfVertex)} methods with multiple
+     * sequences of vertices
+     */
+    @Test
+    public void testHeadSequence() {
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        TmfVertex v2 = fGraph.createVertex(WORKER1, 2);
+        TmfVertex v3 = fGraph.createVertex(WORKER1, 3);
+        fGraph.append(v0);
+        fGraph.append(v1);
+        fGraph.add(v2);
+        fGraph.append(v3);
+        fGraph.closeGraph(3);
+        assertEquals(v0, fGraph.getHead(v1));
+        assertEquals(v0, fGraph.getHead(v0));
+        assertEquals(v2, fGraph.getHead(v2));
+        assertEquals(v2, fGraph.getHead(v3));
+    }
+
+    /**
+     * The test {@link TmfGraph#getParentOf(TmfVertex)} method
+     */
+    @Test
+    public void testParent() {
+        TmfVertex v0 = fGraph.createVertex(WORKER1, 0);
+        TmfVertex v1 = fGraph.createVertex(WORKER2, 1);
+        fGraph.append(v0);
+        fGraph.append(v1);
+        assertEquals(WORKER1, fGraph.getParentOf(v0));
+        assertNotSame(WORKER1, fGraph.getParentOf(v1));
+        assertEquals(WORKER2, fGraph.getParentOf(v1));
+    }
+
+    private class ScanCountVertex implements ITmfGraphVisitor {
+        public int nbVertex = 0;
+        public int nbVLink = 0;
+        public int nbHLink = 0;
+        public int nbStartVertex = 0;
+
+        @Override
+        public void visitHead(TmfVertex node) {
+            nbStartVertex++;
+        }
+
+        @Override
+        public void visit(TmfVertex node) {
+            nbVertex++;
+
+        }
+
+        @Override
+        public void visit(TmfEdge edge, boolean horizontal) {
+            if (horizontal) {
+                nbHLink++;
+            } else {
+                nbVLink++;
+            }
+        }
+    }
+
+    /**
+     * The following graph will be used
+     *
+     * <pre>
+     * ____0___1___2___3___4___5___6___7___8___9___10___11___12___13___14___15
+     *
+     * A   *-------*       *---*-------*---*---*    *---*----*----*---------*
+     *             |           |           |            |    |
+     * B       *---*---*-------*   *-------*------------*    *----------*
+     * </pre>
+     */
+    @SuppressWarnings("null")
+    private void buildFullGraph() {
+        TmfVertex[] vertexA;
+        TmfVertex[] vertexB;
+        long[] timesA = { 0, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 15 };
+        long[] timesB = { 1, 2, 3, 5, 6, 8, 11, 12, 14 };
+        vertexA = new TmfVertex[timesA.length];
+        vertexB = new TmfVertex[timesB.length];
+        for (int i = 0; i < timesA.length; i++) {
+            vertexA[i] = fGraph.createVertex(WORKER1, timesA[i]);
+        }
+        for (int i = 0; i < timesB.length; i++) {
+            vertexB[i] = fGraph.createVertex(WORKER2, timesB[i]);
+        }
+        fGraph.append(vertexA[0]);
+        fGraph.append(vertexA[1]);
+        fGraph.add(vertexA[2]);
+        fGraph.append(vertexA[3]);
+        fGraph.append(vertexA[4]);
+        fGraph.append(vertexA[5]);
+        fGraph.append(vertexA[6]);
+        fGraph.add(vertexA[7]);
+        fGraph.append(vertexA[8]);
+        fGraph.append(vertexA[9]);
+        fGraph.append(vertexA[10]);
+        fGraph.append(vertexA[11]);
+        fGraph.append(vertexB[0]);
+        fGraph.append(vertexB[1]);
+        fGraph.append(vertexB[2]);
+        fGraph.append(vertexB[3]);
+        fGraph.add(vertexB[4]);
+        fGraph.append(vertexB[5]);
+        fGraph.append(vertexB[6]);
+        fGraph.add(vertexB[7]);
+        fGraph.append(vertexB[8]);
+        fGraph.link(vertexA[1], vertexB[1]);
+        fGraph.link(vertexB[3], vertexA[3]);
+        fGraph.link(vertexA[5], vertexB[5]);
+        fGraph.link(vertexB[6], vertexA[8]);
+        fGraph.link(vertexA[9], vertexB[7]);
+    }
+
+    /**
+     * Test the
+     * {@link TmfGraph#scanLineTraverse(IGraphWorker, ITmfGraphVisitor)} method
+     */
+    @Test
+    public void testScanCount() {
+        buildFullGraph();
+        ScanCountVertex visitor = new ScanCountVertex();
+        fGraph.scanLineTraverse(fGraph.getHead(WORKER1), visitor);
+        assertEquals(21, visitor.nbVertex);
+        assertEquals(6, visitor.nbStartVertex);
+        assertEquals(5, visitor.nbVLink);
+        assertEquals(15, visitor.nbHLink);
+    }
+
+    /**
+     * Test the {@link TmfGraphStatistics} class
+     */
+    @Test
+    public void testGraphStatistics() {
+        buildFullGraph();
+        TmfGraphStatistics stats = new TmfGraphStatistics();
+        stats.computeGraphStatistics(fGraph, WORKER1);
+        assertEquals(12, stats.getSum(WORKER1).longValue());
+        assertEquals(11, stats.getSum(WORKER2).longValue());
+        assertEquals(23, stats.getSum().longValue());
+    }
+
+    /**
+     * Test that exception is thrown if a node is linked horizontally to itself
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testHorizontalSelfLink() {
+        TmfVertex v1 = fGraph.createVertex(WORKER1, 1);
+        fGraph.add(v1);
+        fGraph.link(v1, v1);
+    }
 
 }

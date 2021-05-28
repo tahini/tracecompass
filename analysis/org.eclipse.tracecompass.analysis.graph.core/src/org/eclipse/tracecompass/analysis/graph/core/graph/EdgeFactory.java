@@ -30,14 +30,12 @@ import org.eclipse.tracecompass.statesystem.core.interval.ITmfStateInterval;
 public class EdgeFactory {
 
     public static @Nullable TmfEdge createEdge(ITmfStateInterval interval) {
-        if (interval.getValue() == null) {
+        Object value = interval.getValue();
+        if (value == null || (value instanceof Integer && ((Integer) value == EdgeType.EPS.ordinal() || (Integer) value == EdgeType.NO_EDGE.ordinal()))) {
             return null;
         }
         TmfEdge edge = new TmfEdge(new TmfVertex(interval.getStartTime(), interval.getAttribute()), new TmfVertex(interval.getEndTime() + 1, interval.getAttribute()));
-        Object value = interval.getValue();
-        if (value instanceof Integer) {
-            edge.setEdgeType(EdgeType.values()[(Integer) value]);
-        }
+        edge.setEdgeType(EdgeType.values()[(Integer) value]);
         return edge;
     }
 

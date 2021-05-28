@@ -162,15 +162,6 @@ public interface ITmfGraph {
     @Nullable TmfVertex getTail(IGraphWorker worker);
 
     /**
-     * Removes the last vertex of the provided object
-     *
-     * @param worker
-     *            The key of the object the vertex belongs to
-     * @return The removed vertex
-     */
-    @Nullable TmfVertex removeTail(IGraphWorker worker);
-
-    /**
      * Returns head node of the provided object. This is the very first node of
      * an object
      *
@@ -179,14 +170,6 @@ public interface ITmfGraph {
      * @return The head vertex
      */
     @Nullable TmfVertex getHead(IGraphWorker worker);
-
-    /**
-     * Returns the head node of the object of the nodeMap that has the earliest
-     * head vertex time
-     *
-     * @return The head vertex
-     */
-    @Nullable TmfVertex getHead();
 
     /**
      * Returns head vertex from a given node. That is the first of the current
@@ -223,13 +206,6 @@ public interface ITmfGraph {
      * @return The vertex map
      */
     Set<IGraphWorker> getWorkers();
-
-    /**
-     * Returns the number of vertices in the graph
-     *
-     * @return number of vertices
-     */
-    int size();
 
     // ----------------------------------------------
     // Graph operations and visits
@@ -270,16 +246,16 @@ public interface ITmfGraph {
                 visited.add(n);
 
                 // Only visit links up-right, guarantee to visit once only
-                TmfEdge edge = n.getEdge(EdgeDirection.OUTGOING_VERTICAL_EDGE);
+                TmfEdge edge = getEdgeFrom(n, EdgeDirection.OUTGOING_VERTICAL_EDGE);
                 if (edge != null) {
                     stack.addFirst(edge.getVertexTo());
                     visitor.visit(edge, false);
                 }
-                edge = n.getEdge(EdgeDirection.INCOMING_VERTICAL_EDGE);
+                edge = getEdgeFrom(n, EdgeDirection.INCOMING_VERTICAL_EDGE);
                 if (edge != null) {
                     stack.addFirst(edge.getVertexFrom());
                 }
-                edge = n.getEdge(EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
+                edge = getEdgeFrom(n, EdgeDirection.OUTGOING_HORIZONTAL_EDGE);
                 if (edge != null) {
                     visitor.visit(edge, true);
                     n = edge.getVertexTo();

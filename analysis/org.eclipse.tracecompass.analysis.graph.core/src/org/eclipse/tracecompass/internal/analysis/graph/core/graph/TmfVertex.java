@@ -134,7 +134,7 @@ public class TmfVertex implements Comparable<TmfVertex> {
         checkTimestamps(to);
         checkNotSelf(to);
         TmfEdge link = linkHorizontalRaw(to);
-        link.setType(type, linkQualifier);
+        link.setEdgeType(type, linkQualifier);
         return link;
     }
 
@@ -174,7 +174,7 @@ public class TmfVertex implements Comparable<TmfVertex> {
         checkTimestamps(to);
         checkNotSelf(to);
         TmfEdge link = linkVerticalRaw(to);
-        link.setType(type, linkQualifier);
+        link.setEdgeType(type, linkQualifier);
         return link;
     }
 
@@ -290,7 +290,7 @@ public class TmfVertex implements Comparable<TmfVertex> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         // Equal when attribute and timestamp are the same
         if (!(obj instanceof TmfVertex)) {
             return false;
